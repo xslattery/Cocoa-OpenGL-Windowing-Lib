@@ -1,11 +1,9 @@
-#Cocoa-OpenGLWindowing
+# Cocoa-OpenGLWindowing
 
----
-###About:
+### About:
 The purpose of this project is to create a template, which can be used for creating macos / osx OpenGL windows using the native Cocoa API. The primary goal for this project is for it to be usable in C++ projects.
 
----
-###Dependencies:
+### Dependencies:
 As this project uses Apples API's it is macos / osx dependent.
 The libraries / frameworks it requires are:
 
@@ -14,8 +12,7 @@ The libraries / frameworks it requires are:
 
 All the above libraries / frameworks can be found on all modern macos / osx installs.
 
----
-###Build Process:
+### Build Process:
 This project includes multiple **bash build script** that when run will build the project into a usable static or dynamic library.
 In addition this project includes a demo build script that will create an executable demo that showcases the project.
 
