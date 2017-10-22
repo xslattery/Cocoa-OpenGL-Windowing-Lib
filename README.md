@@ -1,6 +1,6 @@
 # Cocoa-OpenGLWindowing
 
-![alt text](other/CocoaWindowImage_Transparent.png "Transparent Cocoa Window Image")
+![Cocoa Window](other/CocoaWindowImage.png "Transparent Cocoa Window")
 
 ### About:
 The purpose of this project is to create a template, which can be used for creating macos / osx OpenGL windows using the native Cocoa API. The primary goal for this project is for it to be usable in C++ projects.
