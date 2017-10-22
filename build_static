@@ -3,6 +3,8 @@
 DIR_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
 cd "$DIR_PATH";
 
+mkdir build;
+
 OBJCPP_FILES="src/*.mm";
 BUILD_FILES="$OBJCPP_FILES";
 

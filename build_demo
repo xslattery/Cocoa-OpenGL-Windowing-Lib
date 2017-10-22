@@ -5,6 +5,8 @@ cd "$DIR_PATH";
 
 ./build_static;
 
+mkdir build;
+
 CPP_FILES="src/demo/*.cpp";
 BUILD_FILES="$CPP_FILES";
 
