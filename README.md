@@ -1,5 +1,7 @@
 # Cocoa-OpenGLWindowing
 
+![alt text](other/CocoaWindowImage_Transparent.png "Transparent Cocoa Window Image")
+
 ### About:
 The purpose of this project is to create a template, which can be used for creating macos / osx OpenGL windows using the native Cocoa API. The primary goal for this project is for it to be usable in C++ projects.
 
@@ -15,7 +17,7 @@ All the above libraries / frameworks can be found on all modern macos / osx inst
 ### Build Process:
 This project includes multiple **bash build script** that when run will build the project into a usable static or dynamic library.
 In addition this project includes a demo build script that will create an executable demo that showcases the project.
-The Compiler user by the build scripts is *Clang*, in addition *libtool* is used for creating the dynamic and static libraries. All these can be found if *Xcode's Command Line Tools* is installed.
+The Compiler user by the build scripts is *Clang*, in addition *libtool* is used for creating the dynamic and static libraries. All these can be found if *Xcode's Command Line Tools* are installed.
 
 - **./build_static**, will generate a static library. *Dependencies* will require linking when using this form of the library.
 - **./build_dynamic**,  will generate a dynamic library.
