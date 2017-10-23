@@ -1,0 +1,16 @@
+#!/bin/bash
+
+DIR_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
+cd "$DIR_PATH";
+
+mkdir build;
+
+OBJCPP_FILES="src/*.mm";
+BUILD_FILES="$OBJCPP_FILES";
+
+LIBS="-framework Cocoa -framework OpenGL -lSystem";
+
+OUTPUT="build/libcocoawindowing.dylib";
+INST_NAME="-install_name @rpath/libcocoawindowing.dylib";
+
+clang++ $INST_NAME -dynamiclib -arch x86_64 -std="c++14" $BUILD_FILES -o $OUTPUT;

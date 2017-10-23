@@ -3,17 +3,19 @@
 DIR_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
 cd "$DIR_PATH";
 
-./build_static;
+./build_dynamic;
 
 mkdir build;
 
 CPP_FILES="src/demo/*.cpp";
 BUILD_FILES="$CPP_FILES";
 
-OUTPUT="build/demo";
-
 LIBS="-framework Cocoa -framework OpenGL -l cocoawindowing";
 LIB_PATH="-L ./build";
 INCLUDE_PATH="-I ./include";
 
-clang++ -arch x86_64 -std=c++14 $LIBS $LIB_PATH $INCLUDE_PATH $BUILD_FILES -o $OUTPUT;
+R_PATH="-rpath @loader_path/"
+
+OUTPUT="build/demo_dynamic";
+
+clang++ -arch x86_64 -std=c++14 $R_PATH $LIBS $LIB_PATH $INCLUDE_PATH $BUILD_FILES -o $OUTPUT;
