@@ -5,12 +5,12 @@ cd "$DIR_PATH";
 
 ./build_dynamic;
 
-mkdir build;
+mkdir -p build;
 
 CPP_FILES="src/demo/*.cpp";
 BUILD_FILES="$CPP_FILES";
 
-LIBS="-framework Cocoa -framework OpenGL -l cocoawindowing";
+LIBS="-framework OpenGL -l cocoawindowing";
 LIB_PATH="-L ./build";
 INCLUDE_PATH="-I ./include";
 
@@ -18,4 +18,4 @@ R_PATH="-rpath @loader_path/"
 
 OUTPUT="build/demo_dynamic";
 
-clang++ -arch x86_64 -std=c++14 $R_PATH $LIBS $LIB_PATH $INCLUDE_PATH $BUILD_FILES -o $OUTPUT;
+clang++ -O3 -arch x86_64 -std=c++14 $R_PATH $LIBS $LIB_PATH $INCLUDE_PATH $BUILD_FILES -o $OUTPUT;
