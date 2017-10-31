@@ -14,6 +14,14 @@ static NSOpenGLView *s_glView = nullptr;
 static bool s_windowCreated = false;
 static bool s_windowShouldClose = true;
 
+//////////////////////
+// Helper Functions:
+static float to_srgb ( float v )
+{
+	if ( v <= 0.0031308 ) return v * 12.92;
+	else return 1.055 * pow(v, 1.0/2.4) - 0.055;
+}
+
 
 //////////////////////////
 // This is the class for 
@@ -29,10 +37,7 @@ static bool s_windowShouldClose = true;
 }
 
 - (void) applicationWillTerminate: (NSApplication*)sender 
-{ 
-	// TODO: This is only tempoary:
-	printf( "Application Terminating.\n" );
-	
+{ 	
 	s_windowShouldClose = true;
 	s_windowCreated = false;
 	s_applicationInited = false;
@@ -71,10 +76,7 @@ static bool s_windowShouldClose = true;
 @implementation WindowDelegate
 
 - (void) windowWillClose: (id)sender 
-{ 
-	// TODO: This is only tempoary:
-	printf( "Window closing.\n" );
-	
+{ 	
 	s_windowShouldClose = true;
 	s_windowCreated = false;
 }
@@ -113,7 +115,7 @@ static bool s_windowShouldClose = true;
 
 - (void) drawRect: (NSRect)bounds 
 {
-	[[NSColor colorWithCalibratedRed:0 green:0 blue:0 alpha:1] set];
+	[[NSColor colorWithCalibratedRed:0 green:0 blue:0 alpha:0] set];
     NSRectFill(bounds);
 }
 
@@ -202,7 +204,7 @@ void create_window ( const char *title, int width, int height )
 		// This array defines what we want our pixel format to be like:
 		NSOpenGLPixelFormatAttribute openGLAttributes [] = 
 		{
-			NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core,
+			// NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core, TODO: Tempoary switch to legacy OpenGL.
 			NSOpenGLPFAAccelerated,
 			NSOpenGLPFADoubleBuffer,
 			NSOpenGLPFAColorSize, 24,
@@ -237,6 +239,16 @@ void create_window ( const char *title, int width, int height )
 		[[s_glView openGLContext] makeCurrentContext];
 		[[s_glView openGLContext] setValues:&swapInterval forParameter:NSOpenGLCPSwapInterval];
 		[[s_glView openGLContext] setView:s_glView];
+
+
+		s_window.titlebarAppearsTransparent = true;
+		s_window.titleVisibility = NSWindowTitleHidden;
+
+		[s_window setBackgroundColor:[NSColor colorWithRed:to_srgb(0.5) green:to_srgb(0.5) blue:to_srgb(0.5) alpha:1]];
+
+		int transparent = 0;
+	    [[s_glView openGLContext] setValues:&transparent forParameter:NSOpenGLCPSurfaceOpacity];
+    	[s_window setOpaque:NO];
 	}
 	else
 	{
