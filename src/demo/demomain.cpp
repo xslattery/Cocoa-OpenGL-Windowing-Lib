@@ -1,5 +1,5 @@
 #include <cocoawindowing.h>
-#include <OpenGL/gl.h> // TODO: Tempoary switch to legacy OpenGL.
+#include <OpenGL/gl.h> // NOTE: Tempoary switch to legacy OpenGL.
 #include <iostream>
 
 int main ( int argc, char const *argv[] )
@@ -14,13 +14,19 @@ int main ( int argc, char const *argv[] )
 
 	glClearColor( 0.1f, 0.1f, 0.1f, 0.5f );
 
+	float rotation = 0;
+
 	while ( !window_is_closing() )
 	{
 		process_window_events();
 
+		rotation += 1.0f;
+
 		glClear( GL_COLOR_BUFFER_BIT );
 
-		// TODO: Tempoary switch to legacy OpenGL.
+		// NOTE: Tempoary switch to legacy OpenGL.
+		glPushMatrix();
+		glRotatef( rotation, 0, 0, 1.0 );
 		glBegin( GL_TRIANGLES );
 		glColor3f( 1.0f, 0.0f, 0.0f);
 		glVertex3f( -0.5f, -0.5f, 0.0f );
@@ -29,6 +35,7 @@ int main ( int argc, char const *argv[] )
 		glColor3f( 0.0f, 0.0f, 1.0f);
 		glVertex3f( 0.0f, 0.5f, 0.0f );
 		glEnd();
+		glPopMatrix();
 		
 		refresh_window();
 	}

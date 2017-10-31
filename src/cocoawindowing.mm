@@ -14,6 +14,7 @@ static NSOpenGLView *s_glView = nullptr;
 static bool s_windowCreated = false;
 static bool s_windowShouldClose = true;
 
+
 //////////////////////
 // Helper Functions:
 static float to_srgb ( float v )
@@ -204,7 +205,7 @@ void create_window ( const char *title, int width, int height )
 		// This array defines what we want our pixel format to be like:
 		NSOpenGLPixelFormatAttribute openGLAttributes [] = 
 		{
-			// NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core, TODO: Tempoary switch to legacy OpenGL.
+			// NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core, NOTE: Tempoary switch to legacy OpenGL.
 			NSOpenGLPFAAccelerated,
 			NSOpenGLPFADoubleBuffer,
 			NSOpenGLPFAColorSize, 24,
@@ -229,23 +230,25 @@ void create_window ( const char *title, int width, int height )
 		[s_glView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
 		[s_glView setWantsBestResolutionOpenGLSurface:YES];
 		
-		[ pixelFormat release ];
+		[pixelFormat release];
 			
 		// Subview it to the windows main view:
 		[[s_window contentView] addSubview:s_glView];
 
-		// This enables (1) / disables (0) vsync
+		// This enables (1) / disables (0) vsync:
 		int swapInterval = 1; 
 		[[s_glView openGLContext] makeCurrentContext];
 		[[s_glView openGLContext] setValues:&swapInterval forParameter:NSOpenGLCPSwapInterval];
 		[[s_glView openGLContext] setView:s_glView];
 
-
+		// Hide the title bar texture & title:
 		s_window.titlebarAppearsTransparent = true;
 		s_window.titleVisibility = NSWindowTitleHidden;
 
+		// Set windows background color, this will be shown in the title bar:
 		[s_window setBackgroundColor:[NSColor colorWithRed:to_srgb(0.5) green:to_srgb(0.5) blue:to_srgb(0.5) alpha:1]];
 
+		// This enables transparency to the opengl view and window:
 		int transparent = 0;
 	    [[s_glView openGLContext] setValues:&transparent forParameter:NSOpenGLCPSurfaceOpacity];
     	[s_window setOpaque:NO];
