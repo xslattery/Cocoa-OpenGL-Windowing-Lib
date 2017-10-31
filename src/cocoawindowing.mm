@@ -1,26 +1,25 @@
 #import <Cocoa/Cocoa.h>
 #include "cocoawindowing.h"
 
+//////////////////////////////////////
+// Translation Unit Local Variables:
 
-static std::string 	s_workingDirectory = "";
+// Application Related:
+static std::string s_workingDirectory = "";
+static bool s_applicationInited = false;
 
-static NSWindow * 	s_window = nullptr;
-static NSOpenGLView * s_glView = nullptr;
-static bool 		s_windowCreated = false;
-static bool 		s_window_should_close = true;
+// Window Related:
+static NSWindow *s_window = nullptr;
+static NSOpenGLView *s_glView = nullptr;
+static bool s_windowCreated = false;
+static bool s_windowShouldClose = true;
 
 
+//////////////////////////
+// This is the class for 
+// the application:
 @interface AppDelegate : NSObject<NSApplicationDelegate> {}
 @end
-
-
-@interface WindowDelegate : NSObject<NSWindowDelegate> {}
-@end
-
-
-@interface OpenGLView : NSOpenGLView {}
-@end
-
 
 @implementation AppDelegate
 
@@ -31,8 +30,12 @@ static bool 		s_window_should_close = true;
 
 - (void) applicationWillTerminate: (NSApplication*)sender 
 { 
-	printf("Application Terminating.\n");
-	s_window_should_close = true;
+	// TODO: This is only tempoary:
+	printf( "Application Terminating.\n" );
+	
+	s_windowShouldClose = true;
+	s_windowCreated = false;
+	s_applicationInited = false;
 }
 
 - (void) applicationWillFinishLaunching: (NSNotification *)aNotification 
@@ -59,12 +62,21 @@ static bool 		s_window_should_close = true;
 @end
 
 
+//////////////////////////////
+// This is the class for the
+// window:
+@interface WindowDelegate : NSObject<NSWindowDelegate> {}
+@end
+
 @implementation WindowDelegate
 
 - (void) windowWillClose: (id)sender 
 { 
-	printf("Window closing.\n");
-	s_window_should_close = true;
+	// TODO: This is only tempoary:
+	printf( "Window closing.\n" );
+	
+	s_windowShouldClose = true;
+	s_windowCreated = false;
 }
 
 - (NSSize) windowWillResize: (NSWindow*)window toSize:(NSSize)frameSize 
@@ -75,6 +87,12 @@ static bool 		s_window_should_close = true;
 @end
 
 
+//////////////////////////////////////
+// This is the class for the windows
+// OpenGL subview:
+@interface OpenGLView : NSOpenGLView {}
+@end
+
 @implementation OpenGLView
 
 - (id) init { self = [super init]; return self; }
@@ -82,12 +100,15 @@ static bool 		s_window_should_close = true;
 - (void) prepareOpenGL 
 { 
 	[super prepareOpenGL]; 
-	[[self openGLContext] makeCurrentContext]; 
+	[[self openGLContext] makeCurrentContext];
 }
 
 - (void) reshape 
 { 
 	[super reshape];
+
+	// NOTE: this can be used to set a min size
+	// or maintain an aspect ratio.
 }
 
 - (void) drawRect: (NSRect)bounds 
@@ -99,46 +120,70 @@ static bool 		s_window_should_close = true;
 @end
 
 
+///////////////////////////////////////
+// This function sets up the NSApp so
+// a NSWindow can be created:
 void init_application()
 {
-	// Initialize the application:
-	[NSApplication sharedApplication];
+	if ( !s_applicationInited )
+	{
+		s_applicationInited = true;
+		
+		// Initialize the application:
+		[NSApplication sharedApplication];
 
-	// Set the current working directory:
-	// IF using an app bundle, set it to the resources folder.
-	NSString *workingDirectory = [ [ NSFileManager defaultManager ] currentDirectoryPath ];
-	NSString *appBundlePath = [ NSString stringWithFormat:@"%@/Contents/Resources", [ [ NSBundle mainBundle ] bundlePath ] ];
-	NSFileManager *fileManager = [ NSFileManager defaultManager ];
-	if ( [ fileManager changeCurrentDirectoryPath:appBundlePath ] == YES ) 
-		workingDirectory = appBundlePath;
-	s_workingDirectory = std::string( (char*)[ workingDirectory UTF8String ] );
+		// Set the current working directory:
+		// If using an app bundle, set it to the resources folder.
+		NSFileManager *fileManager = [NSFileManager defaultManager];
+		NSString *workingDirectory = [[NSFileManager defaultManager] currentDirectoryPath];
+		
+		NSString *appBundlePath = [NSString stringWithFormat:@"%@/Contents/Resources", [[NSBundle mainBundle] bundlePath]];
+		if ( [fileManager changeCurrentDirectoryPath:appBundlePath] == YES ) 
+			workingDirectory = appBundlePath;
+		
+		s_workingDirectory = std::string( (char*)[ workingDirectory UTF8String ] );
 
-	printf( "Working directory: %s\n", s_workingDirectory.c_str() );
+		// TODO: Remove this printf:
+		printf( "Working directory: %s\n", s_workingDirectory.c_str() );
 
-	// Assign the Application Delegate:
-	[NSApp setDelegate:[[AppDelegate alloc] init]];
-	[NSApp finishLaunching];
+		// Assign the Application Delegate:
+		[NSApp setDelegate:[[AppDelegate alloc] init]];
+		[NSApp finishLaunching];
+	}
+	else
+	{
+		// TODO: This should result in some better form of warning / static assert.
+		printf( "The application has already been initalised.\n" );
+	}
 }
 
+/////////////////////////////////////////
+// This function will close the 
+// application and all related windows:
 void close_application ()
 {
+	close_window();
+	s_applicationInited = false;
+	
 	// TODO: Implement this...
-	// more is needed to clean up after the program.
-
-	s_window_should_close = false;
+	// More is needed to clean up
+	// so that the application can be re-inited.
 }
 
+////////////////////////////////
+// This function will create a 
+// OpenGL capable window:
 void create_window ( const char *title, int width, int height )
 {
 	if ( !s_windowCreated )
 	{
 		s_windowCreated = true;
-		s_window_should_close = false;
+		s_windowShouldClose = false;
 
-		// Create the main window and the content view.
+		// Create the main window and the content view:
 		float windowWidth = (float)width;
 		float windowHeight = (float)height;
-		NSRect screenRect = [ [ NSScreen mainScreen ] frame ];
+		NSRect screenRect = [[NSScreen mainScreen] frame];
 		NSRect windowFrame = NSMakeRect(( screenRect.size.width - windowWidth ) * 0.5f, 
 										( screenRect.size.height - windowHeight ) * 0.5f, 
 										windowWidth, windowHeight);
@@ -148,14 +193,11 @@ void create_window ( const char *title, int width, int height )
 											NSWindowStyleMaskMiniaturizable |
 											NSWindowStyleMaskResizable;
 
-		s_window = [ [ NSWindow alloc ] initWithContentRect:windowFrame 
-										styleMask:windowStyleMask 
-										backing:NSBackingStoreBuffered 
-										defer:NO ];	
+		s_window = [[NSWindow alloc] initWithContentRect:windowFrame styleMask:windowStyleMask backing:NSBackingStoreBuffered defer:NO];
 
-		[ s_window setDelegate:[ [ WindowDelegate alloc ] init] ];
-		[ s_window setTitle:[ NSString stringWithUTF8String:title ] ];
-		[ s_window makeKeyAndOrderFront:nil ];
+		[s_window setDelegate:[[WindowDelegate alloc] init]];
+		[s_window setTitle:[NSString stringWithUTF8String:title]];
+		[s_window makeKeyAndOrderFront:nil];
 
 		// This array defines what we want our pixel format to be like:
 		NSOpenGLPixelFormatAttribute openGLAttributes [] = 
@@ -170,25 +212,25 @@ void create_window ( const char *title, int width, int height )
 		};
 
 		// Create a pixel format & gl context based off our chosen attributes:
-		NSOpenGLPixelFormat *pixelFormat = [ [ NSOpenGLPixelFormat alloc ] initWithAttributes:openGLAttributes ];
-		NSOpenGLContext *openglContext = [ [ NSOpenGLContext alloc ] initWithFormat:pixelFormat shareContext:nil ];
+		NSOpenGLPixelFormat *pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:openGLAttributes];
+		NSOpenGLContext *openglContext = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:nil];
 
 		// Set some properties for the windows main view:
-		[ [ s_window contentView ] setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable ];
-		[ [ s_window contentView ] setAutoresizesSubviews:YES ];
+		[[s_window contentView] setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+		[[s_window contentView] setAutoresizesSubviews:YES];
 
 		// Create an OpenGL View and 
-		s_glView = [ [ OpenGLView alloc ] init ];
-		[ s_glView setPixelFormat:pixelFormat ];
-		[ s_glView setOpenGLContext:openglContext ];
-		[ s_glView setFrame:[ [ s_window contentView ] bounds ] ];
-		[ s_glView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-		[ s_glView setWantsBestResolutionOpenGLSurface:YES ];
+		s_glView = [[OpenGLView alloc] init];
+		[s_glView setPixelFormat:pixelFormat];
+		[s_glView setOpenGLContext:openglContext];
+		[s_glView setFrame:[[s_window contentView] bounds]];
+		[s_glView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+		[s_glView setWantsBestResolutionOpenGLSurface:YES];
 		
 		[ pixelFormat release ];
 			
 		// Subview it to the windows main view:
-		[ [ s_window contentView ] addSubview:s_glView ];
+		[[s_window contentView] addSubview:s_glView];
 
 		// This enables (1) / disables (0) vsync
 		int swapInterval = 1; 
@@ -198,71 +240,91 @@ void create_window ( const char *title, int width, int height )
 	}
 	else
 	{
-		// TODO: This should result in some form of warning / static assert.
+		// TODO: This should result in some better form of warning / static assert.
+		printf( "A window has already been created.\n" );
 	}
 }
 
+/////////////////////////////////
+// This function will close the
+// active window:
 void close_window ()
 {
-	s_window_should_close = true;
+	s_windowShouldClose = true;
+	s_windowCreated = false;
+	
+	// TODO: More may be needed here...
+	// To clean up after the window so 
+	// that a new window can be created.
 }
 
+///////////////////////////////////////
+// This function will process all
+// input / events and store them to
+// be accessed by other functions:
 void process_window_events ()
 {
 	NSEvent* Event;
 	do {
-		Event = [ NSApp nextEventMatchingMask:NSEventMaskAny untilDate:nil inMode:NSDefaultRunLoopMode dequeue:YES ];
+		Event = [NSApp nextEventMatchingMask:NSEventMaskAny untilDate:nil inMode:NSDefaultRunLoopMode dequeue:YES];
 		
-		switch ( [ Event type ] ) {
+		switch ( [Event type] ) {
 			
 			case NSEventTypeKeyDown: 
 			{ 
-				[ NSApp sendEvent:Event ]; 
+				[NSApp sendEvent:Event]; 
 			} break;
 			
 			case NSEventTypeKeyUp: 
 			{ 
-				[ NSApp sendEvent:Event ]; 
+				[NSApp sendEvent:Event]; 
 			} break;
 			
 			case NSEventTypeScrollWheel: 
 			{ 
-				[ NSApp sendEvent:Event ]; 
+				[NSApp sendEvent:Event];
 			} break;
 			
-			default: { [ NSApp sendEvent:Event ]; } break;
+			default: { [NSApp sendEvent:Event]; } break;
 		}
 
 	} while ( Event != nil );
 
 	// Mouse Position + in view + pressed button mask:
-	CGPoint mouseLocationOnScreen = [ NSEvent mouseLocation ];
-	NSRect windowRect = [ s_window convertRectFromScreen:NSMakeRect( mouseLocationOnScreen.x, mouseLocationOnScreen.y, 1, 1 ) ];
+	CGPoint mouseLocationOnScreen = [NSEvent mouseLocation];
+	NSRect windowRect = [s_window convertRectFromScreen:NSMakeRect( mouseLocationOnScreen.x, mouseLocationOnScreen.y, 1, 1 )];
 	NSPoint pointInWindow = windowRect.origin;
 	
-	NSPoint mouseLocationInView = [ s_glView convertPoint:pointInWindow fromView:nil ];
+	NSPoint mouseLocationInView = [s_glView convertPoint:pointInWindow fromView:nil];
 	
-	bool mouseInWindowFlag = NSPointInRect( mouseLocationOnScreen, [ s_window frame ] );
+	bool mouseInWindowFlag = NSPointInRect( mouseLocationOnScreen, [s_window frame] );
 
-	unsigned int mouseButtonMask = [ NSEvent pressedMouseButtons ];
+	unsigned int mouseButtonMask = [NSEvent pressedMouseButtons];
 }
 
+/////////////////////////////////////
+// This function will display the
+// OpenGL draw calls to the window:
 void refresh_window () 
 { 
-	[ [ s_glView openGLContext ] flushBuffer ]; 
+	[[s_glView openGLContext] flushBuffer]; 
 }
 
-bool window_should_close ()
+/////////////////////////////////
+// This function returns if the 
+// window wants to close:
+bool window_is_closing ()
 {
-	return s_window_should_close;
+	return s_windowShouldClose;
 }
 
+////////////////////////////////////////
+// This function can be used
+// to set the visibility of the cursor
 void hide_cursor ( bool state )
 {	
-	if ( state )
-		[ NSCursor hide ];
-	else
-		[ NSCursor unhide ];
+	if ( state ) [NSCursor hide];
+	else [NSCursor unhide];
 }
 
 

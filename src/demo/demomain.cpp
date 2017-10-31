@@ -9,7 +9,7 @@ int main ( int argc, char const *argv[] )
 
 	glClearColor(0.1f, 0.1f, 0.1f, 0);
 
-	while ( !window_should_close() )
+	while ( !window_is_closing() )
 	{
 		process_window_events();
 

@@ -12,7 +12,7 @@ void close_window();
 void process_window_events();	
 void refresh_window();
 
-bool window_should_close();
+bool window_is_closing();
 
 void hide_cursor( bool state );
 
