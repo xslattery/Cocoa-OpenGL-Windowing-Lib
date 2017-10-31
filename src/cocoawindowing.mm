@@ -117,7 +117,7 @@ static float to_srgb ( float v )
 - (void) drawRect: (NSRect)bounds 
 {
 	[[NSColor colorWithCalibratedRed:0 green:0 blue:0 alpha:0] set];
-    NSRectFill(bounds);
+    NSRectFill( bounds );
 }
 
 @end
@@ -222,11 +222,18 @@ void create_window ( const char *title, int width, int height )
 		[[s_window contentView] setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
 		[[s_window contentView] setAutoresizesSubviews:YES];
 
-		// Create an OpenGL View and 
+		// Create an OpenGL View: 
 		s_glView = [[OpenGLView alloc] init];
 		[s_glView setPixelFormat:pixelFormat];
 		[s_glView setOpenGLContext:openglContext];
-		[s_glView setFrame:[[s_window contentView] bounds]];
+
+		CGRect glRect;
+		glRect.origin.x = 5;
+		glRect.origin.y = 5; 
+		glRect.size.width = [[s_window contentView] bounds].size.width - 10;
+		glRect.size.height = [[s_window contentView] bounds].size.height - 10;
+		[s_glView setFrame:glRect];
+
 		[s_glView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
 		[s_glView setWantsBestResolutionOpenGLSurface:YES];
 		
