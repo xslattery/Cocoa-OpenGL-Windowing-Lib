@@ -295,42 +295,35 @@ void close_window ()
 // be accessed by other functions:
 void process_window_events ()
 {
-	NSEvent* Event;
+	NSEvent* event;
 	do {
-		Event = [NSApp nextEventMatchingMask:NSEventMaskAny untilDate:nil inMode:NSDefaultRunLoopMode dequeue:YES];
+		event = [NSApp nextEventMatchingMask:NSEventMaskAny untilDate:nil inMode:NSDefaultRunLoopMode dequeue:YES];
 		
-		switch ( [Event type] ) {
+		switch ( [event type] ) {
 			
 			case NSEventTypeKeyDown: 
 			{
-				[NSApp sendEvent:Event]; 
+				[NSApp sendEvent:event]; 
 			} break;
 			
 			case NSEventTypeKeyUp: 
 			{
-				unichar c = [[Event charactersIgnoringModifiers] characterAtIndex:0];
+				// TEMPOARY: This is here until input support is added to the demo.
+				unichar c = [[event charactersIgnoringModifiers] characterAtIndex:0];
+				if ( c == 'f' ) toggle_fullscreen();
 				
-				if ( c == 'f' )
-				{
-					enter_fullscreen();
-				}
-				else if ( c == 'e' )
-				{
-					exit_fullscreen();
-				}
-				
-				[NSApp sendEvent:Event];
+				[NSApp sendEvent:event];
 			} break;
 			
 			case NSEventTypeScrollWheel: 
 			{
-				[NSApp sendEvent:Event];
+				[NSApp sendEvent:event];
 			} break;
 			
-			default: { [NSApp sendEvent:Event]; } break;
+			default: { [NSApp sendEvent:event]; } break;
 		}
 
-	} while ( Event != nil );
+	} while ( event != nil );
 
 	// Mouse Position + in view + pressed button mask:
 	CGPoint mouseLocationOnScreen = [NSEvent mouseLocation];
@@ -362,20 +355,25 @@ bool window_is_closing ()
 
 ////////////////////////////////////////
 // This function can be used
-// to set the visibility of the cursor
+// to set the visibility of the cursor:
 void hide_cursor ( bool state )
 {	
 	if ( state ) [NSCursor hide];
 	else [NSCursor unhide];
 }
 
-void enter_fullscreen ()
+/////////////////////////////////////////////////////////////////
+// This function will make the OpenGLView enter complete
+// fullscreen. NOTE: App switching will not work while in fullscreen.
+void enter_complete_fullscreen ()
 {	
 	if ( !s_glView.inFullScreenMode )
 		[s_glView enterFullScreenMode:[NSScreen mainScreen] withOptions:nil];
 }
 
-void exit_fullscreen ()
+/////////////////////////////////////////////
+// Returns the OpenGLView to windowed mode:
+void exit_complete_fullscreen ()
 {
 	if ( s_glView.inFullScreenMode )
 	{
@@ -386,6 +384,14 @@ void exit_fullscreen ()
 		[s_window setInitialFirstResponder:(NSView *)s_glView]; 
 		[s_window makeFirstResponder:(NSView *)s_glView];
 	}
+}
+
+//////////////////////////////////////////////////
+// This function will move the window
+// into a new fullscreen space or exit from one.
+void toggle_fullscreen ()
+{
+	[s_window toggleFullScreen:nil];
 }
 
 

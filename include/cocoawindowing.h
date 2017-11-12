@@ -16,7 +16,8 @@ bool window_is_closing();
 
 void hide_cursor( bool state );
 
-void enter_fullscreen();
-void exit_fullscreen();
+void toggle_fullscreen();
+void enter_complete_fullscreen();
+void exit_complete_fullscreen();
 
 #endif
