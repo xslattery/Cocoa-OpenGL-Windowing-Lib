@@ -98,7 +98,10 @@ static float to_srgb ( float v )
 
 @implementation OpenGLView
 
-- (id) init { self = [super init]; return self; }
+- (id) init { 
+	self = [super init]; 
+	return self; 
+}
 
 - (void) prepareOpenGL 
 { 
@@ -112,6 +115,9 @@ static float to_srgb ( float v )
 
 	// NOTE: this can be used to set a min size
 	// or maintain an aspect ratio.
+
+	// NSRect viewBounds = [self frame];
+	// [self setFrame:viewBounds];
 }
 
 - (void) drawRect: (NSRect)bounds 
@@ -194,6 +200,7 @@ void create_window ( const char *title, int width, int height )
 		NSWindowStyleMask windowStyleMask = NSWindowStyleMaskClosable | 
 											NSWindowStyleMaskTitled |
 											NSWindowStyleMaskMiniaturizable |
+											// NSWindowStyleMaskFullSizeContentView | // For some reason this affects VSync??
 											NSWindowStyleMaskResizable;
 
 		s_window = [[NSWindow alloc] initWithContentRect:windowFrame styleMask:windowStyleMask backing:NSBackingStoreBuffered defer:NO];
@@ -225,34 +232,28 @@ void create_window ( const char *title, int width, int height )
 		// Create an OpenGL View: 
 		s_glView = [[OpenGLView alloc] init];
 		[s_glView setPixelFormat:pixelFormat];
+		[pixelFormat release]; // TODO: Should this be done?
 		[s_glView setOpenGLContext:openglContext];
-
-		CGRect glRect;
-		glRect.origin.x = 5;
-		glRect.origin.y = 5; 
-		glRect.size.width = [[s_window contentView] bounds].size.width - 10;
-		glRect.size.height = [[s_window contentView] bounds].size.height - 10;
-		[s_glView setFrame:glRect];
-
+		// NOTE: This can be set to a custom CGRect to make the view
+		// only take up a portion or the window.
+		[s_glView setFrame:[[s_window contentView] bounds]];
 		[s_glView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
 		[s_glView setWantsBestResolutionOpenGLSurface:YES];
-		
-		[pixelFormat release];
-			
+		[[s_glView openGLContext] setView:s_glView];
 		// Subview it to the windows main view:
 		[[s_window contentView] addSubview:s_glView];
-
+		
 		// This enables (1) / disables (0) vsync:
+		// TODO: There is currenely an issue with getting 
+		// vsync to enable / disable correctly.
 		int swapInterval = 1; 
 		[[s_glView openGLContext] makeCurrentContext];
 		[[s_glView openGLContext] setValues:&swapInterval forParameter:NSOpenGLCPSwapInterval];
-		[[s_glView openGLContext] setView:s_glView];
 
 		// Hide the title bar texture & title:
 		s_window.titlebarAppearsTransparent = true;
 		s_window.titleVisibility = NSWindowTitleHidden;
-
-		// Set windows background color, this will be shown in the title bar:
+		// Set the window's background color, this will be shown in the title bar:
 		[s_window setBackgroundColor:[NSColor colorWithRed:to_srgb(0.5) green:to_srgb(0.5) blue:to_srgb(0.5) alpha:1]];
 
 		// This enables transparency to the opengl view and window:
