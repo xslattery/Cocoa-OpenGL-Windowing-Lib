@@ -1,7 +1,7 @@
 # Cocoa-OpenGLWindowing
 
 ### About:
-The purpose of this project is to create a template / library, which can be used for creating macos / osx OpenGL windows using the native Cocoa API. The primary goal for this project is for it to be usable in C++ projects.
+The purpose of this project is to create a demo & library, which can be used for creating macos / osx OpenGL window's using the native Cocoa API. The primary goal for this project is for it to be usable in C++ projects.
 
 <img src="other/CocoaWindowImage.png" alt="Cocoa Window Image" width="329px" style="width: 329px;"/>
 

@@ -126,6 +126,10 @@ static float to_srgb ( float v )
     NSRectFill( bounds );
 }
 
+// These exist to prevent keys from beeping:
+- (BOOL) acceptsFirstResponder { return YES; }
+- (void) keyDown: (NSEvent *)theEvent {}
+
 @end
 
 
@@ -243,6 +247,10 @@ void create_window ( const char *title, int width, int height )
 		// Subview it to the windows main view:
 		[[s_window contentView] addSubview:s_glView];
 		
+		// This is done to prevent keys from beeping:
+		[s_window setInitialFirstResponder:(NSView *)s_glView]; 
+		[s_window makeFirstResponder:(NSView *)s_glView];
+
 		// This enables (1) / disables (0) vsync:
 		// TODO: There is currenely an issue with getting 
 		// vsync to enable / disable correctly.
@@ -294,17 +302,28 @@ void process_window_events ()
 		switch ( [Event type] ) {
 			
 			case NSEventTypeKeyDown: 
-			{ 
+			{
 				[NSApp sendEvent:Event]; 
 			} break;
 			
 			case NSEventTypeKeyUp: 
-			{ 
-				[NSApp sendEvent:Event]; 
+			{
+				unichar c = [[Event charactersIgnoringModifiers] characterAtIndex:0];
+				
+				if ( c == 'f' )
+				{
+					enter_fullscreen();
+				}
+				else if ( c == 'e' )
+				{
+					exit_fullscreen();
+				}
+				
+				[NSApp sendEvent:Event];
 			} break;
 			
 			case NSEventTypeScrollWheel: 
-			{ 
+			{
 				[NSApp sendEvent:Event];
 			} break;
 			
@@ -348,6 +367,25 @@ void hide_cursor ( bool state )
 {	
 	if ( state ) [NSCursor hide];
 	else [NSCursor unhide];
+}
+
+void enter_fullscreen ()
+{	
+	if ( !s_glView.inFullScreenMode )
+		[s_glView enterFullScreenMode:[NSScreen mainScreen] withOptions:nil];
+}
+
+void exit_fullscreen ()
+{
+	if ( s_glView.inFullScreenMode )
+	{
+		[s_glView exitFullScreenModeWithOptions:nil];
+		[s_window makeKeyAndOrderFront:nil];
+
+		// This is done to prevent keys from beeping:
+		[s_window setInitialFirstResponder:(NSView *)s_glView]; 
+		[s_window makeFirstResponder:(NSView *)s_glView];
+	}
 }
 
 
