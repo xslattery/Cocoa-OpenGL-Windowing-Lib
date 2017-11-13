@@ -1,5 +1,6 @@
 #import <Cocoa/Cocoa.h>
-#include "cocoawindowing.h"
+#import <string>
+#import "cocoawindowing.h"
 
 //////////////////////////////////////
 // Translation Unit Local Variables:
@@ -13,6 +14,7 @@ static NSWindow *s_window = nullptr;
 static NSOpenGLView *s_glView = nullptr;
 static bool s_windowCreated = false;
 static bool s_windowShouldClose = true;
+static bool s_windowFullscreen = false;
 
 
 //////////////////////
@@ -46,18 +48,18 @@ static float to_srgb ( float v )
 
 - (void) applicationWillFinishLaunching: (NSNotification *)aNotification 
 {
-	id menubar = [ [ NSMenu new ] autorelease ];
-	id appMenuItem = [ [ NSMenuItem new ] autorelease ];
-	[ menubar addItem:appMenuItem ];
-	[ NSApp setMainMenu:menubar ];
-	id appMenu = [ [ NSMenu new ] autorelease ];
-	id appName = [ [ NSProcessInfo processInfo ] processName ];
-	id quitTitle = [ @"Quit " stringByAppendingString:appName ];
-	id quitMenuItem = [ [ [ NSMenuItem alloc ] initWithTitle:quitTitle action:@selector(terminate:) keyEquivalent:@"q" ] autorelease ];
-	[ appMenu addItem:quitMenuItem ];
-	[ appMenuItem setSubmenu:appMenu ];
+	id menubar = [[NSMenu new] autorelease];
+	id appMenuItem = [ [ NSMenuItem new ] autorelease];
+	[menubar addItem:appMenuItem];
+	[NSApp setMainMenu:menubar];
+	id appMenu = [[NSMenu new ] autorelease];
+	id appName = [[NSProcessInfo processInfo] processName];
+	id quitTitle = [@"Quit " stringByAppendingString:appName];
+	id quitMenuItem = [[[NSMenuItem alloc] initWithTitle:quitTitle action:@selector(terminate:) keyEquivalent:@"q"] autorelease];
+	[appMenu addItem:quitMenuItem];
+	[appMenuItem setSubmenu:appMenu];
 
-	[ NSApp setActivationPolicy:NSApplicationActivationPolicyRegular ];
+	[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
 }
 
 - (void) applicationDidFinishLaunching: (NSNotification *)notification 
@@ -136,7 +138,7 @@ static float to_srgb ( float v )
 ///////////////////////////////////////
 // This function sets up the NSApp so
 // a NSWindow can be created:
-void init_application()
+extern "C" void init_application()
 {
 	if ( !s_applicationInited )
 	{
@@ -173,7 +175,7 @@ void init_application()
 /////////////////////////////////////////
 // This function will close the 
 // application and all related windows:
-void close_application ()
+extern "C" void close_application ()
 {
 	close_window();
 	s_applicationInited = false;
@@ -186,7 +188,7 @@ void close_application ()
 ////////////////////////////////
 // This function will create a 
 // OpenGL capable window:
-void create_window ( const char *title, int width, int height )
+extern "C" void create_window ( const char *title, int width, int height )
 {
 	if ( !s_windowCreated )
 	{
@@ -279,7 +281,7 @@ void create_window ( const char *title, int width, int height )
 /////////////////////////////////
 // This function will close the
 // active window:
-void close_window ()
+extern "C" void close_window ()
 {
 	s_windowShouldClose = true;
 	s_windowCreated = false;
@@ -289,12 +291,42 @@ void close_window ()
 	// that a new window can be created.
 }
 
+#define KEY_COUNT 132		// NOTE: These values will have to be changed
+#define MBTN_COUNT 8		// depending on what keys / buttons are supported.
+#define MOD_KEYS 4			// NOTE: KEY_COUNT has been extended to support arrow keys this is a hacky solution.
+static bool s_activeKeys [KEY_COUNT];
+static bool s_downKeys [KEY_COUNT];
+static bool s_upKeys [KEY_COUNT];
+static bool s_modifierActiveKeys [MOD_KEYS];
+static bool s_activeMouseButtons [MBTN_COUNT];
+static bool s_downMouseButtons [MBTN_COUNT];
+static bool s_upMouseButtons [MBTN_COUNT];
+static float s_mousePositionX = 0;
+static float s_mousePositionY = 0;
+
 ///////////////////////////////////////
 // This function will process all
 // input / events and store them to
 // be accessed by other functions:
-void process_window_events ()
+extern "C" void process_window_events ()
 {
+	for ( size_t k = 0; k < KEY_COUNT; ++k )
+	{
+		s_downKeys[k] = false;
+		s_upKeys[k] = false;
+	}
+
+	for ( size_t b = 0; b < MBTN_COUNT; ++b )
+	{
+		s_downMouseButtons[b] = false;
+		s_upMouseButtons[b] = false;
+	}
+
+	for ( size_t m = 0; m < MOD_KEYS; ++m )
+	{
+		s_modifierActiveKeys[m] = false;
+	}
+
 	NSEvent* event;
 	do {
 		event = [NSApp nextEventMatchingMask:NSEventMaskAny untilDate:nil inMode:NSDefaultRunLoopMode dequeue:YES];
@@ -303,15 +335,67 @@ void process_window_events ()
 			
 			case NSEventTypeKeyDown: 
 			{
+				size_t modifierFlags = [event modifierFlags];
+				size_t commandKeyFlag = modifierFlags & NSEventModifierFlagCommand;
+				size_t controlKeyFlag = modifierFlags & NSEventModifierFlagControl;
+				size_t optionKeyFlag = modifierFlags & NSEventModifierFlagOption;
+				size_t shiftKeyFlag = modifierFlags & NSEventModifierFlagShift;
+				if ( commandKeyFlag ) s_modifierActiveKeys[ModifierKeys::COMMAND] = true;
+				if ( controlKeyFlag ) s_modifierActiveKeys[ModifierKeys::OPTION] = true;
+				if ( optionKeyFlag ) s_modifierActiveKeys[ModifierKeys::CONTROL] = true;
+				if ( shiftKeyFlag ) s_modifierActiveKeys[ModifierKeys::SHIFT] = true;
+
+				size_t c = [[event charactersIgnoringModifiers] characterAtIndex:0];
+				if ( c < KEY_COUNT )
+				{
+					if ( c >= 'A' && c <= 'Z' ) c += 32; // NOTE: Makes caps & non-caps the same
+					if ( c == 25 ) c = Keys::KEY_TAB; // NOTE: Fixes tab when shift is pressed.
+					s_activeKeys[c] = true;
+					s_downKeys[c] = true;
+				}
+
+				// NOTE: This is a hacky solution to allow for arrow keys:
+				if ( c >= Keys::KEY_UP && c <= Keys::KEY_RIGHT )
+				{
+					c -= 63104;
+					s_activeKeys[c] = true;
+					s_downKeys[c] = true;
+				}
+
 				[NSApp sendEvent:event]; 
 			} break;
 			
 			case NSEventTypeKeyUp: 
-			{
-				// TEMPOARY: This is here until input support is added to the demo.
-				unichar c = [[event charactersIgnoringModifiers] characterAtIndex:0];
-				if ( c == 'f' ) toggle_fullscreen();
-				
+			{	
+				int modifierFlags = [event modifierFlags];
+				int commandKeyFlag = modifierFlags & NSEventModifierFlagCommand;
+				int controlKeyFlag = modifierFlags & NSEventModifierFlagControl;
+				int optionKeyFlag = modifierFlags & NSEventModifierFlagOption;
+				int shiftKeyFlag = modifierFlags & NSEventModifierFlagShift;
+				if ( commandKeyFlag ) s_modifierActiveKeys[ModifierKeys::COMMAND] = false;
+				if ( controlKeyFlag ) s_modifierActiveKeys[ModifierKeys::OPTION] = false;
+				if ( optionKeyFlag ) s_modifierActiveKeys[ModifierKeys::CONTROL] = false;
+				if ( shiftKeyFlag ) s_modifierActiveKeys[ModifierKeys::SHIFT] = false;				
+
+				size_t c = [[event charactersIgnoringModifiers] characterAtIndex:0];
+				if ( c < KEY_COUNT )
+				{
+					if ( c >= 'A' && c <= 'Z' ) c += 32; // NOTE:Makes caps & non-caps the same
+					if ( c == 25 ) c = Keys::KEY_TAB; // NOTE: Fixes tab when shift is pressed.
+					s_activeKeys[c] = false;
+					s_upKeys[c] = true;
+				}
+
+				// NOTE: This is a hacky solution to allow for arrow keys:
+				if ( c >= Keys::KEY_UP && c <= Keys::KEY_RIGHT )
+				{
+					c -= 63104;
+					s_activeKeys[c] = false;
+					s_upKeys[c] = true;
+				}
+
+				printf("%zu\n", c);
+
 				[NSApp sendEvent:event];
 			} break;
 			
@@ -325,57 +409,49 @@ void process_window_events ()
 
 	} while ( event != nil );
 
-	// Mouse Position + in view + pressed button mask:
-	CGPoint mouseLocationOnScreen = [NSEvent mouseLocation];
+	// Mouse Position: + In view + Pressed button mask:
+	NSPoint mouseLocationOnScreen = [NSEvent mouseLocation];
 	NSRect windowRect = [s_window convertRectFromScreen:NSMakeRect( mouseLocationOnScreen.x, mouseLocationOnScreen.y, 1, 1 )];
-	NSPoint pointInWindow = windowRect.origin;
-	
+	NSPoint pointInWindow = windowRect.origin;	
 	NSPoint mouseLocationInView = [s_glView convertPoint:pointInWindow fromView:nil];
-	
-	bool mouseInWindowFlag = NSPointInRect( mouseLocationOnScreen, [s_window frame] );
+	s_mousePositionX = static_cast<float>( mouseLocationInView.x );
+	s_mousePositionY = static_cast<float>( mouseLocationInView.y );
 
-	unsigned int mouseButtonMask = [NSEvent pressedMouseButtons];
+	bool mouseInWindowFlag = NSPointInRect( mouseLocationOnScreen, [s_window frame] );
+	size_t mouseButtonMask = [NSEvent pressedMouseButtons];
 }
 
 /////////////////////////////////////
 // This function will display the
 // OpenGL draw calls to the window:
-void refresh_window () 
+extern "C" void refresh_window () 
 { 
 	[[s_glView openGLContext] flushBuffer]; 
 }
 
-/////////////////////////////////
-// This function returns if the 
-// window wants to close:
-bool window_is_closing ()
-{
-	return s_windowShouldClose;
-}
 
 ////////////////////////////////////////
 // This function can be used
 // to set the visibility of the cursor:
-void hide_cursor ( bool state )
+extern "C" void set_cursor_hidden ( bool state )
 {	
 	if ( state ) [NSCursor hide];
 	else [NSCursor unhide];
 }
 
-/////////////////////////////////////////////////////////////////
-// This function will make the OpenGLView enter complete
-// fullscreen. NOTE: App switching will not work while in fullscreen.
-void enter_complete_fullscreen ()
-{	
-	if ( !s_glView.inFullScreenMode )
-		[s_glView enterFullScreenMode:[NSScreen mainScreen] withOptions:nil];
-}
-
-/////////////////////////////////////////////
-// Returns the OpenGLView to windowed mode:
-void exit_complete_fullscreen ()
+///////////////////////////////////////////////////////////////////////////
+// This function will make the OpenGLView enter complete fullscreen
+// by making the NSView the full screen size & on top of everything else.
+// NOTE: App switching will not work while in fullscreen.
+// Because of this, set_window_fullscreen() is recomended instead.
+extern "C" void set_window_complete_fullscreen ( bool state )
 {
-	if ( s_glView.inFullScreenMode )
+	if ( state && !s_glView.inFullScreenMode )
+	{
+		if ( !s_glView.inFullScreenMode )
+			[s_glView enterFullScreenMode:[NSScreen mainScreen] withOptions:nil];
+	}
+	else if ( !state && s_glView.inFullScreenMode )
 	{
 		[s_glView exitFullScreenModeWithOptions:nil];
 		[s_window makeKeyAndOrderFront:nil];
@@ -386,16 +462,78 @@ void exit_complete_fullscreen ()
 	}
 }
 
-//////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////
 // This function will move the window
 // into a new fullscreen space or exit from one.
-void toggle_fullscreen ()
+// NOTE: This is the prefered method to set_window_complete_fullscreen()
+extern "C" void set_window_fullscreen ( bool state )
 {
-	[s_window toggleFullScreen:nil];
+	if ( state && !s_windowFullscreen ) { [s_window toggleFullScreen:nil]; s_windowFullscreen = true; }
+	else if ( !state && s_windowFullscreen ) { [s_window toggleFullScreen:nil]; s_windowFullscreen = false; }
 }
 
 
+/////////////////////////////////
+// This function returns if the 
+// window wants to close:
+extern "C" bool get_window_is_closing ()
+{
+	return s_windowShouldClose;
+}
 
+///////////////////////////////////
+extern "C" bool get_key ( size_t keyCode )
+{	
+	if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE: Makes caps & non-caps the same
+	return s_activeKeys[keyCode];
+}
 
+///////////////////////////////////
+extern "C" bool get_key_down ( size_t keyCode )
+{
+	if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE: Makes caps & non-caps the same
+	return s_downKeys[keyCode];
+}
 
+///////////////////////////////////
+extern "C" bool get_key_up ( size_t keyCode )
+{
+	if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE: Makes caps & non-caps the same
+	return s_upKeys[keyCode];
+}
 
+///////////////////////////////////
+extern "C" bool get_modifier_key ( size_t keyCode )
+{
+	return s_modifierActiveKeys[keyCode];
+}
+
+///////////////////////////////////
+extern "C" bool get_mouse_button ( size_t button )
+{
+	return s_activeMouseButtons[button];
+}
+
+///////////////////////////////////
+extern "C" bool get_mouse_button_down ( size_t button )
+{
+	return s_downMouseButtons[button];
+}
+
+///////////////////////////////////
+extern "C" bool get_mouse_button_up ( size_t button )
+{
+	return s_upMouseButtons[button];
+}
+
+///////////////////////////////////
+extern "C" float get_mouse_position_x ()
+{
+	return s_mousePositionX;
+}
+
+///////////////////////////////////
+extern "C" float get_mouse_position_y ()
+{
+	return s_mousePositionY;
+}

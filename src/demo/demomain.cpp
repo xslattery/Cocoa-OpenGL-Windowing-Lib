@@ -16,7 +16,7 @@ int main ( int argc, char const *argv[] )
 
 	float rotation = 0;
 
-	while ( !window_is_closing() )
+	while ( !get_window_is_closing() )
 	{
 		process_window_events();
 

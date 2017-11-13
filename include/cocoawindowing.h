@@ -1,23 +1,86 @@
 #ifndef _COCOA_WINDOWING_H_
 #define _COCOA_WINDOWING_H_
 
-#include <string>
+#include <cstddef> // For size_t.
 
-void init_application();
-void close_application();
+extern "C" void init_application ();
+extern "C" void close_application ();
 
-void create_window( const char *title, int width, int height );
-void close_window();
+extern "C" void create_window ( const char *title, int width, int height );
+extern "C" void close_window ();
+extern "C" void process_window_events ();	
+extern "C" void refresh_window ();
 
-void process_window_events();	
-void refresh_window();
+extern "C" void set_cursor_hidden ( bool state );
+extern "C" void set_window_fullscreen ( bool state );
+extern "C" void set_window_complete_fullscreen ( bool state );
 
-bool window_is_closing();
+extern "C" bool get_window_is_closing ();
+extern "C" bool get_key ( size_t keyCode );
+extern "C" bool get_key_down ( size_t keyCode );
+extern "C" bool get_key_up ( size_t keyCode );
+extern "C" bool get_modifier_key ( size_t keyCode );
+extern "C" bool get_mouse_button ( size_t button );
+extern "C" bool get_mouse_button_down ( size_t button );
+extern "C" bool get_mouse_button_up ( size_t button );
+extern "C" float get_mouse_position_x ();
+extern "C" float get_mouse_position_y ();
 
-void hide_cursor( bool state );
+enum ModifierKeys : size_t
+{
+	COMMAND = 0,
+	OPTION = 1,
+	CONTROL = 2,
+	SHIFT = 3
+};
 
-void toggle_fullscreen();
-void enter_complete_fullscreen();
-void exit_complete_fullscreen();
+enum Keys : size_t
+{
+	KEY_A = 'a',
+	KEY_B = 'b',
+	KEY_C = 'c',
+	KEY_D = 'd',
+	KEY_E = 'e',
+	KEY_F = 'f',
+	KEY_G = 'g',
+	KEY_H = 'h',
+	KEY_I = 'i',
+	KEY_J = 'j',
+	KEY_K = 'k',
+	KEY_L = 'l',
+	KEY_M = 'm',
+	KEY_N = 'n',
+	KEY_O = 'o',
+	KEY_P = 'p',
+	KEY_Q = 'q',
+	KEY_R = 'r',
+	KEY_S = 's',
+	KEY_T = 't',
+	KEY_U = 'u',
+	KEY_V = 'v',
+	KEY_W = 'w',
+	KEY_X = 'x',
+	KEY_Y = 'y',
+	KEY_Z = 'z',
+
+	KEY_0 = 48,
+	KEY_1 = 49,
+	KEY_2 = 50,
+	KEY_3 = 51,
+	KEY_4 = 52,
+	KEY_5 = 53,
+	KEY_6 = 54,
+	KEY_7 = 55,
+	KEY_8 = 56,
+	KEY_9 = 57,
+	
+	KEY_ENTER = 13,
+	KEY_TAB = 9,
+	KEY_DELETE = 127,
+	KEY_UP = 63232,
+	KEY_DOWN = 63233,
+	KEY_LEFT = 63234,
+	KEY_RIGHT = 63235,
+};
 
 #endif
