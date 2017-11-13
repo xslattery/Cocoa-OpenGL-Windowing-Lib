@@ -3,18 +3,37 @@
 #import "cocoawindowing.h"
 
 //////////////////////////////////////
-// Translation Unit Local Variables:
+// Translation Unit Global Variables:
 
 // Application Related:
 static std::string s_workingDirectory = "";
 static bool s_applicationInited = false;
 
-// Window Related:
+// Window & View Related:
 static NSWindow *s_window = nullptr;
 static NSOpenGLView *s_glView = nullptr;
 static bool s_windowCreated = false;
 static bool s_windowShouldClose = true;
 static bool s_windowFullscreen = false;
+
+// Input Related:
+// NOTE: These values will have to be changed
+// depending on what keys / buttons are supported.
+// NOTE: KEY_COUNT has been extended to support arrow keys this is a hacky solution.
+#define KEY_COUNT 132
+#define MBTN_COUNT 3
+#define MOD_KEY_COUNT 4
+static bool s_activeKeys [KEY_COUNT];
+static bool s_downKeys [KEY_COUNT];
+static bool s_upKeys [KEY_COUNT];
+static bool s_modifierActiveKeys [MOD_KEY_COUNT];
+static bool s_activeMouseButtons [MBTN_COUNT];
+static bool s_downMouseButtons [MBTN_COUNT];
+static bool s_upMouseButtons [MBTN_COUNT];
+static float s_mousePositionX = 0;
+static float s_mousePositionY = 0;
+static float s_mouseScrollValueY = 0;
+static float s_mouseScrollValueX = 0;
 
 
 //////////////////////
@@ -291,19 +310,6 @@ extern "C" void close_window ()
 	// that a new window can be created.
 }
 
-#define KEY_COUNT 132		// NOTE: These values will have to be changed
-#define MBTN_COUNT 3		// depending on what keys / buttons are supported.
-#define MOD_KEY_COUNT 4			// NOTE: KEY_COUNT has been extended to support arrow keys this is a hacky solution.
-static bool s_activeKeys [KEY_COUNT];
-static bool s_downKeys [KEY_COUNT];
-static bool s_upKeys [KEY_COUNT];
-static bool s_modifierActiveKeys [MOD_KEY_COUNT];
-static bool s_activeMouseButtons [MBTN_COUNT];
-static bool s_downMouseButtons [MBTN_COUNT];
-static bool s_upMouseButtons [MBTN_COUNT];
-static float s_mousePositionX = 0;
-static float s_mousePositionY = 0;
-
 ///////////////////////////////////////
 // This function will process all
 // input / events and store them to
@@ -399,6 +405,9 @@ extern "C" void process_window_events ()
 			
 			case NSEventTypeScrollWheel: 
 			{
+				s_mouseScrollValueY = static_cast<float>([Event scrollingDeltaY]);
+				s_mouseScrollValueX = static_cast<float>([Event scrollingDeltaX]);
+
 				[NSApp sendEvent:event];
 			} break;
 			
@@ -483,14 +492,6 @@ extern "C" void set_window_fullscreen ( bool state )
 	else if ( !state && s_windowFullscreen ) { [s_window toggleFullScreen:nil]; s_windowFullscreen = false; }
 }
 
-
-/////////////////////////////////
-// This function returns if the 
-// window wants to close:
-extern "C" bool get_window_is_closing ()
-{
-	return s_windowShouldClose;
-}
 
 ///////////////////////////////////
 extern "C" bool get_key ( size_t keyCode )
@@ -578,4 +579,36 @@ extern "C" float get_mouse_position_x ()
 extern "C" float get_mouse_position_y ()
 {
 	return s_mousePositionY;
+}
+
+///////////////////////////////////
+extern "C" float get_mouse_scroll_y ()
+{
+	return s_mouseScrollValueY;
+}
+
+///////////////////////////////////
+extern "C" float get_mouse_scroll_x ()
+{
+	return s_mouseScrollValueX;
+}
+
+/////////////////////////////////
+// This function returns if the 
+// window wants to close:
+extern "C" bool get_window_is_closing ()
+{
+	return s_windowShouldClose;
+}
+
+///////////////////////////////////
+extern "C" float get_window_width ()
+{
+	return static_cast<float>( [s_glView frame].size.width );
+}
+
+///////////////////////////////////
+extern "C" float get_window_height ()
+{
+	return static_cast<float>( [s_glView frame].size.height );
 }

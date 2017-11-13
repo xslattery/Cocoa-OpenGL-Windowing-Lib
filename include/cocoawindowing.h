@@ -15,16 +15,22 @@ extern "C" void set_cursor_hidden ( bool state );
 extern "C" void set_window_fullscreen ( bool state );
 extern "C" void set_window_complete_fullscreen ( bool state );
 
-extern "C" bool get_window_is_closing ();
 extern "C" bool get_key ( size_t keyCode );
 extern "C" bool get_key_down ( size_t keyCode );
 extern "C" bool get_key_up ( size_t keyCode );
 extern "C" bool get_modifier_key ( size_t keyCode );
+
 extern "C" bool get_mouse_button ( size_t button );
 extern "C" bool get_mouse_button_down ( size_t button );
 extern "C" bool get_mouse_button_up ( size_t button );
 extern "C" float get_mouse_position_x ();
 extern "C" float get_mouse_position_y ();
+extern "C" float get_mouse_scroll_x ();
+extern "C" float get_mouse_scroll_y ();
+
+extern "C" bool get_window_is_closing ();
+extern "C" float get_window_width ();
+extern "C" float get_window_height ();
 
 enum ModifierKeys : size_t
 {
