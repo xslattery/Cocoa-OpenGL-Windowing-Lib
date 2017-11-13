@@ -15,6 +15,7 @@ static NSOpenGLView *s_glView = nullptr;
 static bool s_windowCreated = false;
 static bool s_windowShouldClose = true;
 static bool s_windowFullscreen = false;
+static bool s_srgbEnabled = false;
 
 // Input Related:
 // NOTE: These values will have to be changed
@@ -278,17 +279,6 @@ extern "C" void create_window ( const char *title, int width, int height )
 		int swapInterval = 1; 
 		[[s_glView openGLContext] makeCurrentContext];
 		[[s_glView openGLContext] setValues:&swapInterval forParameter:NSOpenGLCPSwapInterval];
-
-		// Hide the title bar texture & title:
-		s_window.titlebarAppearsTransparent = true;
-		s_window.titleVisibility = NSWindowTitleHidden;
-		// Set the window's background color, this will be shown in the title bar:
-		[s_window setBackgroundColor:[NSColor colorWithRed:to_srgb(0.5) green:to_srgb(0.5) blue:to_srgb(0.5) alpha:1]];
-
-		// This enables transparency to the opengl view and window:
-		int transparent = 0;
-	    [[s_glView openGLContext] setValues:&transparent forParameter:NSOpenGLCPSurfaceOpacity];
-    	[s_window setOpaque:NO];
 	}
 	else
 	{
@@ -405,8 +395,8 @@ extern "C" void process_window_events ()
 			
 			case NSEventTypeScrollWheel: 
 			{
-				s_mouseScrollValueY = static_cast<float>([Event scrollingDeltaY]);
-				s_mouseScrollValueX = static_cast<float>([Event scrollingDeltaX]);
+				s_mouseScrollValueY = static_cast<float>([event scrollingDeltaY]);
+				s_mouseScrollValueX = static_cast<float>([event scrollingDeltaX]);
 
 				[NSApp sendEvent:event];
 			} break;
@@ -490,6 +480,58 @@ extern "C" void set_window_fullscreen ( bool state )
 {
 	if ( state && !s_windowFullscreen ) { [s_window toggleFullScreen:nil]; s_windowFullscreen = true; }
 	else if ( !state && s_windowFullscreen ) { [s_window toggleFullScreen:nil]; s_windowFullscreen = false; }
+}
+
+///////////////////////////////////
+extern "C" void set_window_size ( float width, float height )
+{	
+	// TODO:
+	// There is an issue where if the window is in fullscreen spaces it resizes in the space.
+	// Maybe make it so it cant be resized when in fullscreen.
+	float titleBarHeight = [s_window frame].size.height - [[s_window contentView] frame].size.height;
+	NSRect frame = [s_window frame];
+	frame.origin.x = ([[NSScreen mainScreen] frame].size.width - width)/2;
+	frame.origin.y = ([[NSScreen mainScreen] frame].size.height - height)/2;
+	frame.size.width = width;
+	frame.size.height = height + titleBarHeight;
+	[s_window setFrame:frame display:YES animate:YES];
+}
+
+///////////////////////////////////
+extern "C" void set_window_enable_srgb ( bool state )
+{
+	s_srgbEnabled = state;
+}
+
+///////////////////////////////////
+extern "C" void set_window_background_color ( float r, float g, float b, float a )
+{
+	// Set the window's background color, this will be shown in the title bar:
+	if ( s_srgbEnabled ) [s_window setBackgroundColor:[NSColor colorWithRed:to_srgb(r) green:to_srgb(g) blue:to_srgb(b) alpha:a]];
+	else [s_window setBackgroundColor:[NSColor colorWithRed:r green:g blue:b alpha:a]];
+}
+
+///////////////////////////////////
+extern "C" void set_window_title_bar_hidden ( bool state )
+{
+	// Hide the title bar texture:
+	if ( state ) s_window.titlebarAppearsTransparent = true;
+}
+
+///////////////////////////////////
+extern "C" void set_window_title_hidden ( bool state )
+{
+	// Hide the title bar text:
+	if ( state ) s_window.titleVisibility = NSWindowTitleHidden;
+}
+
+///////////////////////////////////
+extern "C" void set_window_transparency ( bool state )
+{
+	// This enables transparency to the opengl view and window:
+	int transparent = !state;
+    [[s_glView openGLContext] setValues:&transparent forParameter:NSOpenGLCPSurfaceOpacity];
+	[s_window setOpaque:(state == true ? NO : YES)];
 }
 
 

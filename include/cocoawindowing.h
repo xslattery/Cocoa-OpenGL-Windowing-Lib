@@ -14,6 +14,13 @@ extern "C" void refresh_window ();
 extern "C" void set_cursor_hidden ( bool state );
 extern "C" void set_window_fullscreen ( bool state );
 extern "C" void set_window_complete_fullscreen ( bool state );
+extern "C" void set_window_size ( float width, float height );
+
+extern "C" void set_window_background_color ( float r, float g, float b, float a );
+extern "C" void set_window_title_bar_hidden ( bool state );
+extern "C" void set_window_title_hidden ( bool state );
+extern "C" void set_window_enable_srgb ( bool state );
+extern "C" void set_window_transparency ( bool state );
 
 extern "C" bool get_key ( size_t keyCode );
 extern "C" bool get_key_down ( size_t keyCode );

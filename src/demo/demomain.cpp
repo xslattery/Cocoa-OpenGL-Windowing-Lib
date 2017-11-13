@@ -4,28 +4,35 @@
 
 int main ( int argc, char const *argv[] )
 {
-	
 	init_application();
 	create_window( "Cocoa Window", 640, 480 );
 
+	set_window_title_bar_hidden( false );
+	set_window_title_hidden( false );
+	set_window_transparency( false );
+	set_window_enable_srgb( true );
+	set_window_background_color( 0.5f, 0.5f, 0.5f, 1.0f );
+	
 	std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << '\n';
 
 	glEnable( GL_FRAMEBUFFER_SRGB );
-
-	glClearColor( 0.1f, 0.1f, 0.15f, 0.8f );
+	glClearColor( 0.5f, 0.5f, 0.5f, 0.5f );
 
 	float rotation = 0;
-
 	while ( !get_window_is_closing() )
 	{
 		process_window_events();
 
-		rotation += 1.0f;
+		if ( get_key_down(Keys::KEY_F) ) set_window_fullscreen( true );
+		if ( get_key_down(Keys::KEY_G) ) set_window_fullscreen( false );
+		if ( get_key_down(Keys::KEY_R) ) set_window_size( 1280, 720 );
+		if ( get_key_down(Keys::KEY_E) ) set_window_size( 640, 480 );
 
 		glClear( GL_COLOR_BUFFER_BIT );
 
 		// NOTE: Tempoary switch to legacy OpenGL.
 		glPushMatrix();
+		rotation += 1.0f;
 		glRotatef( rotation, 0, 0, 1.0 );
 		glBegin( GL_TRIANGLES );
 		glColor3f( 1.0f, 0.0f, 0.0f);
