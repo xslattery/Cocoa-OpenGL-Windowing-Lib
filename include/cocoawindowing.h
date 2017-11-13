@@ -1,7 +1,7 @@
 #ifndef _COCOA_WINDOWING_H_
 #define _COCOA_WINDOWING_H_
 
-#include <cstddef> // For size_t.
+#include <cstddef> // NOTE(Xavier): (2017.11.13) For size_t.
 
 extern "C" void init_application ();
 extern "C" void close_application ();
@@ -19,7 +19,6 @@ extern "C" void set_window_position ( float x, float y );
 
 //////////////////////////////
 extern "C" void set_window_background_color ( float r, float g, float b, float a );
-// This should be called before 'set_window_background_color' or it will not be applied to the background.
 extern "C" void set_window_background_enable_srgb ( bool state );
 extern "C" void set_window_title_bar_hidden ( bool state );
 extern "C" void set_window_title_hidden ( bool state );
@@ -47,6 +46,10 @@ extern "C" float get_window_hidpi_height ();
 
 extern "C" float get_screen_width ();
 extern "C" float get_screen_height ();
+
+extern "C" const char* get_application_support_directory ( const char *appName = nullptr );
+extern "C" void create_directory_at ( const char* dir );
+extern "C" void remove_file_at ( const char* filename );
 
 enum ModifierKeys : size_t
 {
@@ -115,7 +118,7 @@ enum Keys : size_t
 	KEY_AT = '@',
 	KEY_EXCLIMATION = '!',
 	KEY_TILDA = '~',
-	// NOTE: '`' This key is still missing.
+	// NOTE(Xavier): (2017.11.13) The '`' key is still missing.
 	KEY_SEMICOLON = ';',
 	KEY_COLON = ':',
 	KEY_SINGLEQUOTE = '\'',
@@ -127,7 +130,7 @@ enum Keys : size_t
 	KEY_FULLSTOP = '.',
 	KEY_LESSTHAN = '<',
 	KEY_GREATERTHAN = '>',
-	// NOTE: '|' This key is still missing.
+	// NOTE(Xavier): (2017.11.13) The '|' key is still missing.
 
 	KEY_ENTER = 13,
 	KEY_TAB = 9,

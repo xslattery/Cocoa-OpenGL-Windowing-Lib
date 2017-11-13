@@ -18,9 +18,11 @@ static bool s_windowFullscreen = false;
 static bool s_srgbEnabled = false;
 
 // Input Related:
-// NOTE: These values will have to be changed
-// depending on what keys / buttons are supported.
-// NOTE: KEY_COUNT has been extended to support arrow keys this is a hacky solution.
+// NOTE(Xavier): (2017.11.13) These values will have to 
+// be changed depending on what keys / buttons are supported.
+// NOTE(Xavier): (2017.11.13) KEY_COUNT has been extended to 
+// support arrow keys this is a hacky solution. (The last 4 have
+// been configured for the 4 directions)
 #define KEY_COUNT 132
 #define MBTN_COUNT 3
 #define MOD_KEY_COUNT 4
@@ -37,15 +39,6 @@ static float s_mouseScrollValueY = 0;
 static float s_mouseScrollValueX = 0;
 
 
-//////////////////////
-// Helper Functions:
-static float to_srgb ( float v )
-{
-	if ( v <= 0.0031308 ) return v * 12.92;
-	else return 1.055 * pow(v, 1.0/2.4) - 0.055;
-}
-
-
 //////////////////////////
 // This is the class for 
 // the application:
@@ -53,18 +46,6 @@ static float to_srgb ( float v )
 @end
 
 @implementation AppDelegate
-
-- (BOOL) applicationShouldTerminateAfterLastWindowClosed: (NSApplication*)sender 
-{ 
-	return YES; 
-}
-
-- (void) applicationWillTerminate: (NSApplication*)sender 
-{ 	
-	s_windowShouldClose = true;
-	s_windowCreated = false;
-	s_applicationInited = false;
-}
 
 - (void) applicationWillFinishLaunching: (NSNotification *)aNotification 
 {
@@ -82,31 +63,35 @@ static float to_srgb ( float v )
 	[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
 }
 
-- (void) applicationDidFinishLaunching: (NSNotification *)notification 
-{
-	[NSApp activateIgnoringOtherApps:YES];
+- (void) applicationDidFinishLaunching: (NSNotification *)notification { [NSApp activateIgnoringOtherApps:YES]; }
+
+- (BOOL) applicationShouldTerminateAfterLastWindowClosed: (NSApplication*)sender { return YES; }
+
+- (void) applicationWillTerminate: (NSApplication*)sender 
+{ 	
+	s_windowShouldClose = true;
+	s_windowCreated = false;
+	s_applicationInited = false;
 }
 
 @end
 
 
-//////////////////////////////
-// This is the class for the
-// window:
+//////////////////////////
+// This is the class for 
+// the window:
 @interface WindowDelegate : NSObject<NSWindowDelegate> {}
 @end
 
 @implementation WindowDelegate
 
+// NOTE(Xavier): (2017.11.13) this can be used to set a min / max size or maintain an aspect ratio.
+- (NSSize) windowWillResize: (NSWindow*)window toSize:(NSSize)frameSize { return frameSize; }
+
 - (void) windowWillClose: (id)sender 
 { 	
 	s_windowShouldClose = true;
 	s_windowCreated = false;
-}
-
-- (NSSize) windowWillResize: (NSWindow*)window toSize:(NSSize)frameSize 
-{ 
-	return frameSize; 
 }
 
 @end
@@ -120,7 +105,8 @@ static float to_srgb ( float v )
 
 @implementation OpenGLView
 
-- (id) init { 
+- (id) init 
+{ 
 	self = [super init]; 
 	return self; 
 }
@@ -131,19 +117,11 @@ static float to_srgb ( float v )
 	[[self openGLContext] makeCurrentContext];
 }
 
-- (void) reshape 
-{ 
-	[super reshape];
-
-	// NOTE: this can be used to set a min size
-	// or maintain an aspect ratio.
-
-	// NSRect viewBounds = [self frame];
-	// [self setFrame:viewBounds];
-}
+- (void) reshape { [super reshape]; }
 
 - (void) drawRect: (NSRect)bounds 
 {
+	// NOTE(Xavier): (2017.11.13) This is for transparent windows:
 	[[NSColor colorWithCalibratedRed:0 green:0 blue:0 alpha:0] set];
     NSRectFill( bounds );
 }
@@ -178,7 +156,7 @@ extern "C" void init_application()
 		
 		s_workingDirectory = std::string( (char*)[ workingDirectory UTF8String ] );
 
-		// TODO: Remove this printf:
+		// TODO(Xavier): (2017.11.13) Remove this printf:
 		printf( "Working directory: %s\n", s_workingDirectory.c_str() );
 
 		// Assign the Application Delegate:
@@ -187,7 +165,7 @@ extern "C" void init_application()
 	}
 	else
 	{
-		// TODO: This should result in some better form of warning / static assert.
+		// TODO(Xavier): (2017.11.13) This should result in some better form of warning / static assert.
 		printf( "The application has already been initalised.\n" );
 	}
 }
@@ -200,7 +178,7 @@ extern "C" void close_application ()
 	close_window();
 	s_applicationInited = false;
 	
-	// TODO: Implement this...
+	// TODO(Xavier): (2017.11.13) Implement this...
 	// More is needed to clean up
 	// so that the application can be re-inited.
 }
@@ -238,7 +216,7 @@ extern "C" void create_window ( const char *title, int width, int height )
 		// This array defines what we want our pixel format to be like:
 		NSOpenGLPixelFormatAttribute openGLAttributes [] = 
 		{
-			// NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core, NOTE: Tempoary switch to legacy OpenGL.
+			NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core,
 			NSOpenGLPFAAccelerated,
 			NSOpenGLPFADoubleBuffer,
 			NSOpenGLPFAColorSize, 24,
@@ -258,9 +236,9 @@ extern "C" void create_window ( const char *title, int width, int height )
 		// Create an OpenGL View: 
 		s_glView = [[OpenGLView alloc] init];
 		[s_glView setPixelFormat:pixelFormat];
-		[pixelFormat release]; // TODO: Should this be done?
+		[pixelFormat release]; // TODO(Xavier): (2017.11.13) Should this be done?
 		[s_glView setOpenGLContext:openglContext];
-		// NOTE: This can be set to a custom CGRect to make the view
+		// NOTE(Xavier): (2017.11.13) This can be set to a custom CGRect to make the view
 		// only take up a portion or the window.
 		[s_glView setFrame:[[s_window contentView] bounds]];
 		[s_glView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
@@ -277,7 +255,7 @@ extern "C" void create_window ( const char *title, int width, int height )
 		[[s_glView openGLContext] makeCurrentContext];
 
 		// This enables (1) / disables (0) vsync:
-		// TODO: There is currenely an issue with getting 
+		// TODO(Xavier): (2017.11.13) There is currenely an issue with getting 
 		// vsync to enable / disable correctly.
 		// IF: I can get this to work, I will abstract it away into a toggleable function.
 		int swapInterval = 1; 
@@ -288,7 +266,7 @@ extern "C" void create_window ( const char *title, int width, int height )
 	}
 	else
 	{
-		// TODO: This should result in some better form of warning / static assert.
+		// TODO(Xavier): (2017.11.13) This should result in some better form of warning / static assert.
 		printf( "A window has already been created.\n" );
 	}
 }
@@ -303,11 +281,11 @@ extern "C" void close_window ()
 
 	[s_window close];
 
-	// TODO: More may be needed here...
+	// TODO(Xavier): (2017.11.13) More may be needed here...
 	// To clean up after the window so 
 	// that a new window can be created.
 
-	// BUG: There is currently a bug where, when the window
+	// BUG(Xavier): (2017.11.13) There is currently a bug where, when the window
 	// is closed and a new one is opened the programs memory
 	// footpring only increases. It appears to be a leak.
 	// I am currently not sure what is causing this.
@@ -359,13 +337,13 @@ extern "C" void process_window_events ()
 				size_t c = [[event charactersIgnoringModifiers] characterAtIndex:0];
 				if ( c < KEY_COUNT )
 				{
-					if ( c >= 'A' && c <= 'Z' ) c += 32; // NOTE: Makes caps & non-caps the same
-					if ( c == 25 ) c = Keys::KEY_TAB; // NOTE: Fixes tab when shift is pressed.
+					if ( c >= 'A' && c <= 'Z' ) c += 32; // NOTE(Xavier): (2017.11.13) Makes caps & non-caps the same
+					if ( c == 25 ) c = Keys::KEY_TAB; // NOTE(Xavier): (2017.11.13) Fixes tab when shift is pressed.
 					if ( !s_activeKeys[c] ) s_downKeys[c] = true;
 					s_activeKeys[c] = true;
 				}
 
-				// NOTE: This is a hacky solution to allow for arrow keys:
+				// NOTE(Xavier): (2017.11.13) This is a hacky solution to allow for arrow keys:
 				if ( c >= Keys::KEY_UP && c <= Keys::KEY_RIGHT )
 				{
 					c -= 63104;
@@ -391,13 +369,13 @@ extern "C" void process_window_events ()
 				size_t c = [[event charactersIgnoringModifiers] characterAtIndex:0];
 				if ( c < KEY_COUNT )
 				{
-					if ( c >= 'A' && c <= 'Z' ) c += 32; // NOTE:Makes caps & non-caps the same
-					if ( c == 25 ) c = Keys::KEY_TAB; // NOTE: Fixes tab when shift is pressed.
+					if ( c >= 'A' && c <= 'Z' ) c += 32; // NOTE(Xavier): (2017.11.13) Makes caps & non-caps the same
+					if ( c == 25 ) c = Keys::KEY_TAB; // NOTE(Xavier): (2017.11.13) Fixes tab when shift is pressed.
 					s_activeKeys[c] = false;
 					s_upKeys[c] = true;
 				}
 
-				// NOTE: This is a hacky solution to allow for arrow keys:
+				// NOTE(Xavier): (2017.11.13) This is a hacky solution to allow for arrow keys:
 				if ( c >= Keys::KEY_UP && c <= Keys::KEY_RIGHT )
 				{
 					c -= 63104;
@@ -467,7 +445,7 @@ extern "C" void set_cursor_hidden ( bool state )
 ///////////////////////////////////////////////////////////////////////////
 // This function will make the OpenGLView enter complete fullscreen
 // by making the NSView the full screen size & on top of everything else.
-// NOTE: App switching will not work while in fullscreen.
+// NOTE(Xavier): (2017.11.13) App switching will not work while in fullscreen.
 // Because of this, set_window_fullscreen() is recomended instead.
 extern "C" void set_window_complete_fullscreen ( bool state )
 {
@@ -490,18 +468,21 @@ extern "C" void set_window_complete_fullscreen ( bool state )
 /////////////////////////////////////////////////////////////
 // This function will move the window
 // into a new fullscreen space or exit from one.
-// NOTE: This is the prefered method to set_window_complete_fullscreen()
+// NOTE(Xavier): (2017.11.13) This is the prefered method to set_window_complete_fullscreen()
 extern "C" void set_window_fullscreen ( bool state )
 {
 	if ( state && !s_windowFullscreen ) { [s_window toggleFullScreen:nil]; s_windowFullscreen = true; }
 	else if ( !state && s_windowFullscreen ) { [s_window toggleFullScreen:nil]; s_windowFullscreen = false; }
 }
 
-///////////////////////////////////
+/////////////////////////////////////
+// This sets the size of the window:
 extern "C" void set_window_size ( float width, float height )
 {
 	if ( !s_windowFullscreen )
 	{
+		// NOTE(Xavier): (2017.11.13) The title bar had to be taken into account.
+		// For some reason, this it different to when the window is first created.
 		float titleBarHeight = [s_window frame].size.height - [[s_window contentView] frame].size.height;
 		NSRect frame = [s_window frame];
 		frame.origin.x = ([[NSScreen mainScreen] frame].size.width - width)/2;
@@ -524,38 +505,50 @@ extern "C" void set_window_position ( float x, float y )
 	}
 }
 
-///////////////////////////////////
+////////////////////////////////////////////////////////////
+// NOTE(Xavier): (2017.11.13) This should be called before 
+// 'set_window_background_color' or it will not be applied to the background.
 extern "C" void set_window_background_enable_srgb ( bool state )
 {
 	s_srgbEnabled = state;
 }
 
-///////////////////////////////////
+////////////////////////////////////////////////////////////
+// This function sets the background color of the widow:
+// This is imporant when the titlebar is hidden, because it
+// will be the color that displays in place of the titlebar texture.
+// NOTE(Xavier): (2017.11.13) If srgb colors are wanted it needs to be
+// enabled before this function is called.
 extern "C" void set_window_background_color ( float r, float g, float b, float a )
 {
-	// Set the window's background color, this will be shown in the title bar:
+	auto to_srgb = []( float v ) -> float
+	{
+		if ( v <= 0.0031308 ) return v * 12.92;
+		else return 1.055 * pow(v, 1.0/2.4) - 0.055;
+	};
+
 	if ( s_srgbEnabled ) [s_window setBackgroundColor:[NSColor colorWithRed:to_srgb(r) green:to_srgb(g) blue:to_srgb(b) alpha:a]];
 	else [s_window setBackgroundColor:[NSColor colorWithRed:r green:g blue:b alpha:a]];
 }
 
 ///////////////////////////////////
+// Hides the title bar:
 extern "C" void set_window_title_bar_hidden ( bool state )
 {
-	// Hide the title bar texture:
 	if ( state ) s_window.titlebarAppearsTransparent = true;
 }
 
 ///////////////////////////////////
+// Hides title bar text:
 extern "C" void set_window_title_hidden ( bool state )
 {
-	// Hide the title bar text:
 	if ( state ) s_window.titleVisibility = NSWindowTitleHidden;
 }
 
-///////////////////////////////////
+//////////////////////////////////////////////////
+// Enables transparency for the view and window:
 extern "C" void set_window_transparency ( bool state )
 {
-	// This enables transparency to the opengl view and window:
 	int transparent = !state;
     [[s_glView openGLContext] setValues:&transparent forParameter:NSOpenGLCPSurfaceOpacity];
 	[s_window setOpaque:(state == true ? NO : YES)];
@@ -567,8 +560,8 @@ extern "C" bool get_key ( size_t keyCode )
 {
 	if ( keyCode < KEY_COUNT )
 	{
-		if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE: Makes caps & non-caps the same
-		if ( keyCode >= Keys::KEY_UP && keyCode <= Keys::KEY_RIGHT ) keyCode -= 63104; // NOTE: Hacky fix for arrow keys.
+		if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE(Xavier): (2017.11.13) Makes caps & non-caps the same
+		if ( keyCode >= Keys::KEY_UP && keyCode <= Keys::KEY_RIGHT ) keyCode -= 63104; // NOTE(Xavier): (2017.11.13) Hacky fix for arrow keys.
 		return s_activeKeys[keyCode];
 	}
 	return false;
@@ -579,8 +572,8 @@ extern "C" bool get_key_down ( size_t keyCode )
 {
 	if ( keyCode < KEY_COUNT )
 	{
-		if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE: Makes caps & non-caps the same
-		if ( keyCode >= Keys::KEY_UP && keyCode <= Keys::KEY_RIGHT ) keyCode -= 63104; // NOTE: Hacky fix for arrow keys.
+		if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE(Xavier): (2017.11.13) Makes caps & non-caps the same
+		if ( keyCode >= Keys::KEY_UP && keyCode <= Keys::KEY_RIGHT ) keyCode -= 63104; // NOTE(Xavier): (2017.11.13) Hacky fix for arrow keys.
 		return s_downKeys[keyCode];
 	}
 	return false;
@@ -591,8 +584,8 @@ extern "C" bool get_key_up ( size_t keyCode )
 {
 	if ( keyCode < KEY_COUNT )
 	{
-		if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE: Makes caps & non-caps the same
-		if ( keyCode >= Keys::KEY_UP && keyCode <= Keys::KEY_RIGHT ) keyCode -= 63104; // NOTE: Hacky fix for arrow keys.
+		if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE(Xavier): (2017.11.13) Makes caps & non-caps the same
+		if ( keyCode >= Keys::KEY_UP && keyCode <= Keys::KEY_RIGHT ) keyCode -= 63104; // NOTE(Xavier): (2017.11.13) Hacky fix for arrow keys.
 		return s_upKeys[keyCode];
 	}
 	return false;
@@ -662,9 +655,7 @@ extern "C" float get_mouse_scroll_x ()
 	return s_mouseScrollValueX;
 }
 
-/////////////////////////////////
-// This function returns if the 
-// window wants to close:
+///////////////////////////////////
 extern "C" bool get_window_is_closing ()
 {
 	return s_windowShouldClose;
@@ -704,4 +695,48 @@ extern "C" float get_screen_width ()
 extern "C" float get_screen_height ()
 {
 	return static_cast<float>( [[NSScreen mainScreen] frame].size.height );
+}
+
+
+//////////////////////////////////////////////////
+// NOTE(Xavier): (2017.11.13) This function will 
+// return a nullptr if there are any errors.
+// IF: The program is not in an app bundle, the passed
+// name will be used.
+extern "C" const char* get_application_support_directory ( const char *appName )
+{	
+	NSString *bundleID = [[NSBundle mainBundle] bundleIdentifier];
+	if ( bundleID == nil && appName == nullptr ) return nullptr;
+	else bundleID = [NSString stringWithUTF8String:appName];
+
+	NSFileManager *fm = [NSFileManager defaultManager];
+	NSURL *dirPath = nil;
+	NSArray *appSupportDir = [fm URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask];
+	if ( [appSupportDir count] > 0 )
+	{
+		dirPath = [[appSupportDir objectAtIndex:0] URLByAppendingPathComponent:bundleID];
+		NSError *theError = nil;
+		if ( ![fm createDirectoryAtURL:dirPath withIntermediateDirectories:YES attributes:nil error:&theError] )
+		{
+			return nullptr;
+		}
+	}
+
+	// NOTE(Xavier): (2017.11.13) There may be a memory leak here:
+	return (const char*)[[dirPath.path stringByAppendingString:@"/"] UTF8String];
+}
+
+///////////////////////////////////
+extern "C" void create_directory_at ( const char* dir )
+{
+	NSString *directory = [NSString stringWithUTF8String:dir];
+	NSError	*error = nil;
+	[[NSFileManager defaultManager] createDirectoryAtPath:directory withIntermediateDirectories:NO attributes:nil error:&error];
+}
+
+///////////////////////////////////
+extern "C" void remove_file_at ( const char* filename )
+{
+	NSString *fileRemoval = [NSString stringWithUTF8String:filename];
+	[[NSFileManager defaultManager] removeItemAtPath:fileRemoval error:NULL];
 }
