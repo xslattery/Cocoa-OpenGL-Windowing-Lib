@@ -1,0 +1,29 @@
+{
+	"build_systems":
+	[
+		{
+			"cmd": "./build_demo.sh; ./build/demo_dynamic",
+			"name": "Demo - build & run",
+			"shell": true,
+			"working_dir": "$project_path/.."
+		},
+		{
+			"cmd": "./build_dynamic.sh;",
+			"name": "Dynamic - build",
+			"shell": true,
+			"working_dir": "$project_path/.."
+		},
+		{
+			"cmd": "./build_static.sh;",
+			"name": "Static - build",
+			"shell": true,
+			"working_dir": "$project_path/.."
+		}
+	],
+	"folders":
+	[
+		{
+			"path": "$project_path/../.."
+		}
+	]
+}

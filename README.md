@@ -6,10 +6,9 @@ The purpose of this project is to create a demo & library, which can be used for
 <img src="other/CocoaWindowImage.png" alt="Cocoa Window Image" width="329px" style="width: 329px;"/>
 
 ### Dependencies:
-As this project uses Apples API's it is macos / osx dependent.
-The libraries / frameworks it requires are:
+As this project uses Apples API's it is macos / osx dependent. The libraries / frameworks it requires are:
 
- - Cocoa framework
+ - Cocoa framework *(Wrapper including: AppKit.framework, Foundation.framework, CoreData.framework)*
  - OpenGL framework
 
 All the above libraries / frameworks can be found on all modern macos / osx installs.
@@ -23,3 +22,6 @@ The Compiler user by the build scripts is *Clang*, in addition *libtool* is used
 - **./build_dynamic**,  will generate a dynamic library.
 - **./build_demo**, will create an demo executable.
 - Build products can be found inside the builds directory.
+
+### Sublime Text:
+There is a Sublime Text 3 project included inside **other/** for convenience. It can be used to build directly from inside the sublime editor.
