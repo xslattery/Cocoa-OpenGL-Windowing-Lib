@@ -12,7 +12,7 @@ int main ( int argc, char const *argv[] )
 
 	glEnable( GL_FRAMEBUFFER_SRGB );
 
-	glClearColor( 0.1f, 0.1f, 0.1f, 0.5f );
+	glClearColor( 0.1f, 0.1f, 0.15f, 0.8f );
 
 	float rotation = 0;
 

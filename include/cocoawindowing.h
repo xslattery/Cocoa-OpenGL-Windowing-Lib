@@ -73,7 +73,40 @@ enum Keys : size_t
 	KEY_7 = 55,
 	KEY_8 = 56,
 	KEY_9 = 57,
-	
+
+	KEY_PLUS = '+',
+	KEY_MINUS = '-',
+	KEY_STAR = '*',
+	KEY_EQUALS = '=',
+	KEY_UNDERSCORE = '_',
+	KEY_RIGHT_ROUNDBRACKET = ')',
+	KEY_LEFT_ROUNDBRACKET = '(',
+	KEY_RIGHT_CURLYBRACKET = '}',
+	KEY_LEFT_CURLYBRACKET = '{',
+	KEY_RIGHT_SQUAREBRACKET = ']',
+	KEY_LEFT_SQUAREBRACKET = '[',
+	KEY_AMPERSAN = '&',
+	KEY_CARROT = '^',
+	KEY_PERCENTSIGN = '%',
+	KEY_DOLLARSIGN = '$',
+	KEY_POUND = '#',
+	KEY_AT = '@',
+	KEY_EXCLIMATION = '!',
+	KEY_TILDA = '~',
+	// NOTE: '`' This key is still missing.
+	KEY_SEMICOLON = ';',
+	KEY_COLON = ':',
+	KEY_SINGLEQUOTE = '\'',
+	KEY_DOUBLEQUOTE = '\"',
+	KEY_BACKSLASH = '\\',
+	KEY_FORWARDSLASH = '/',
+	KEY_QUESTIONMARK = '?',
+	KEY_COMMA = ',',
+	KEY_FULLSTOP = '.',
+	KEY_LESSTHAN = '<',
+	KEY_GREATERTHAN = '>',
+	// NOTE: '|' This key is still missing.
+
 	KEY_ENTER = 13,
 	KEY_TAB = 9,
 	KEY_DELETE = 127,
@@ -81,6 +114,12 @@ enum Keys : size_t
 	KEY_DOWN = 63233,
 	KEY_LEFT = 63234,
 	KEY_RIGHT = 63235,
+};
+
+enum Mouse : size_t
+{
+	LEFT = 0,
+	RIGHT = 1,
 };
 
 #endif

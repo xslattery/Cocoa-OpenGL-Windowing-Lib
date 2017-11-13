@@ -292,12 +292,12 @@ extern "C" void close_window ()
 }
 
 #define KEY_COUNT 132		// NOTE: These values will have to be changed
-#define MBTN_COUNT 8		// depending on what keys / buttons are supported.
-#define MOD_KEYS 4			// NOTE: KEY_COUNT has been extended to support arrow keys this is a hacky solution.
+#define MBTN_COUNT 3		// depending on what keys / buttons are supported.
+#define MOD_KEY_COUNT 4			// NOTE: KEY_COUNT has been extended to support arrow keys this is a hacky solution.
 static bool s_activeKeys [KEY_COUNT];
 static bool s_downKeys [KEY_COUNT];
 static bool s_upKeys [KEY_COUNT];
-static bool s_modifierActiveKeys [MOD_KEYS];
+static bool s_modifierActiveKeys [MOD_KEY_COUNT];
 static bool s_activeMouseButtons [MBTN_COUNT];
 static bool s_downMouseButtons [MBTN_COUNT];
 static bool s_upMouseButtons [MBTN_COUNT];
@@ -322,7 +322,7 @@ extern "C" void process_window_events ()
 		s_upMouseButtons[b] = false;
 	}
 
-	for ( size_t m = 0; m < MOD_KEYS; ++m )
+	for ( size_t m = 0; m < MOD_KEY_COUNT; ++m )
 	{
 		s_modifierActiveKeys[m] = false;
 	}
@@ -350,16 +350,16 @@ extern "C" void process_window_events ()
 				{
 					if ( c >= 'A' && c <= 'Z' ) c += 32; // NOTE: Makes caps & non-caps the same
 					if ( c == 25 ) c = Keys::KEY_TAB; // NOTE: Fixes tab when shift is pressed.
+					if ( !s_activeKeys[c] ) s_downKeys[c] = true;
 					s_activeKeys[c] = true;
-					s_downKeys[c] = true;
 				}
 
 				// NOTE: This is a hacky solution to allow for arrow keys:
 				if ( c >= Keys::KEY_UP && c <= Keys::KEY_RIGHT )
 				{
 					c -= 63104;
+					if ( !s_activeKeys[c] ) s_downKeys[c] = true;
 					s_activeKeys[c] = true;
-					s_downKeys[c] = true;
 				}
 
 				[NSApp sendEvent:event]; 
@@ -394,8 +394,6 @@ extern "C" void process_window_events ()
 					s_upKeys[c] = true;
 				}
 
-				printf("%zu\n", c);
-
 				[NSApp sendEvent:event];
 			} break;
 			
@@ -409,16 +407,29 @@ extern "C" void process_window_events ()
 
 	} while ( event != nil );
 
-	// Mouse Position: + In view + Pressed button mask:
+	// Mouse Position:
 	NSPoint mouseLocationOnScreen = [NSEvent mouseLocation];
 	NSRect windowRect = [s_window convertRectFromScreen:NSMakeRect( mouseLocationOnScreen.x, mouseLocationOnScreen.y, 1, 1 )];
 	NSPoint pointInWindow = windowRect.origin;	
 	NSPoint mouseLocationInView = [s_glView convertPoint:pointInWindow fromView:nil];
 	s_mousePositionX = static_cast<float>( mouseLocationInView.x );
-	s_mousePositionY = static_cast<float>( mouseLocationInView.y );
-
-	bool mouseInWindowFlag = NSPointInRect( mouseLocationOnScreen, [s_window frame] );
+	s_mousePositionY = static_cast<float>( [s_glView frame].size.height - mouseLocationInView.y );
+	
+	// Mouse Buttons:
 	size_t mouseButtonMask = [NSEvent pressedMouseButtons];
+	for ( size_t m = 0; m < MBTN_COUNT; ++m )
+	{
+		if ( mouseButtonMask & (1 << m) )
+		{
+			if ( !s_activeMouseButtons[m] ) s_downMouseButtons[m] = true;
+			s_activeMouseButtons[m] = true;
+		}
+		else if ( !(mouseButtonMask & (1 << m) ) && s_activeMouseButtons[m] )
+		{
+			s_activeMouseButtons[m] = false;
+			s_upMouseButtons[m] = true;
+		}
+	}
 }
 
 /////////////////////////////////////
@@ -483,47 +494,78 @@ extern "C" bool get_window_is_closing ()
 
 ///////////////////////////////////
 extern "C" bool get_key ( size_t keyCode )
-{	
-	if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE: Makes caps & non-caps the same
-	return s_activeKeys[keyCode];
+{
+	if ( keyCode < KEY_COUNT )
+	{
+		if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE: Makes caps & non-caps the same
+		if ( keyCode >= Keys::KEY_UP && keyCode <= Keys::KEY_RIGHT ) keyCode -= 63104; // NOTE: Hacky fix for arrow keys.
+		return s_activeKeys[keyCode];
+	}
+	return false;
 }
 
 ///////////////////////////////////
 extern "C" bool get_key_down ( size_t keyCode )
 {
-	if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE: Makes caps & non-caps the same
-	return s_downKeys[keyCode];
+	if ( keyCode < KEY_COUNT )
+	{
+		if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE: Makes caps & non-caps the same
+		if ( keyCode >= Keys::KEY_UP && keyCode <= Keys::KEY_RIGHT ) keyCode -= 63104; // NOTE: Hacky fix for arrow keys.
+		return s_downKeys[keyCode];
+	}
+	return false;
 }
 
 ///////////////////////////////////
 extern "C" bool get_key_up ( size_t keyCode )
 {
-	if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE: Makes caps & non-caps the same
-	return s_upKeys[keyCode];
+	if ( keyCode < KEY_COUNT )
+	{
+		if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE: Makes caps & non-caps the same
+		if ( keyCode >= Keys::KEY_UP && keyCode <= Keys::KEY_RIGHT ) keyCode -= 63104; // NOTE: Hacky fix for arrow keys.
+		return s_upKeys[keyCode];
+	}
+	return false;
 }
 
 ///////////////////////////////////
 extern "C" bool get_modifier_key ( size_t keyCode )
 {
-	return s_modifierActiveKeys[keyCode];
+	if ( keyCode < MOD_KEY_COUNT )
+	{
+		return s_modifierActiveKeys[keyCode];
+	}
+	return false;
 }
 
 ///////////////////////////////////
 extern "C" bool get_mouse_button ( size_t button )
 {
-	return s_activeMouseButtons[button];
+	if ( button < MBTN_COUNT )
+	{
+		return s_activeMouseButtons[button];
+	}
+	return false;
 }
 
 ///////////////////////////////////
 extern "C" bool get_mouse_button_down ( size_t button )
 {
-	return s_downMouseButtons[button];
+	if ( button < MBTN_COUNT )
+	{
+		return s_downMouseButtons[button];
+	}
+	return false;
 }
 
 ///////////////////////////////////
 extern "C" bool get_mouse_button_up ( size_t button )
 {
-	return s_upMouseButtons[button];
+	if ( button < MBTN_COUNT )
+	{
+		return s_upMouseButtons[button];
+	}
+	return false;
 }
 
 ///////////////////////////////////
