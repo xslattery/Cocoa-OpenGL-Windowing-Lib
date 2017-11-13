@@ -14,4 +14,4 @@ INCLUDE_PATH="-I ./include";
 OUTPUT="build/libcocoawindowing.dylib";
 INST_NAME="-install_name @rpath/libcocoawindowing.dylib";
 
-clang++ -O3 $INST_NAME -dynamiclib -arch x86_64 -std="c++14" $INCLUDE_PATH $LIBS $BUILD_FILES -o $OUTPUT;
+clang++ -Wall -O3 $INST_NAME -dynamiclib -arch x86_64 -std="c++14" $INCLUDE_PATH $LIBS $BUILD_FILES -o $OUTPUT;

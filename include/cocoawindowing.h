@@ -15,12 +15,16 @@ extern "C" void set_cursor_hidden ( bool state );
 extern "C" void set_window_fullscreen ( bool state );
 extern "C" void set_window_complete_fullscreen ( bool state );
 extern "C" void set_window_size ( float width, float height );
+extern "C" void set_window_position ( float x, float y );
 
+//////////////////////////////
 extern "C" void set_window_background_color ( float r, float g, float b, float a );
+// This should be called before 'set_window_background_color' or it will not be applied to the background.
+extern "C" void set_window_background_enable_srgb ( bool state );
 extern "C" void set_window_title_bar_hidden ( bool state );
 extern "C" void set_window_title_hidden ( bool state );
-extern "C" void set_window_enable_srgb ( bool state );
 extern "C" void set_window_transparency ( bool state );
+/////////////////////////////
 
 extern "C" bool get_key ( size_t keyCode );
 extern "C" bool get_key_down ( size_t keyCode );
@@ -38,6 +42,11 @@ extern "C" float get_mouse_scroll_y ();
 extern "C" bool get_window_is_closing ();
 extern "C" float get_window_width ();
 extern "C" float get_window_height ();
+extern "C" float get_window_hidpi_width ();
+extern "C" float get_window_hidpi_height ();
+
+extern "C" float get_screen_width ();
+extern "C" float get_screen_height ();
 
 enum ModifierKeys : size_t
 {

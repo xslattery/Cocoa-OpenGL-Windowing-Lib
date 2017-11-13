@@ -3,7 +3,7 @@
 DIR_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
 cd "$DIR_PATH";
 
-./build_dynamic;
+./build_dynamic.sh;
 
 mkdir -p build;
 
@@ -18,4 +18,4 @@ R_PATH="-rpath @loader_path/"
 
 OUTPUT="build/demo_dynamic";
 
-clang++ -O3 -arch x86_64 -std=c++14 $R_PATH $LIBS $LIB_PATH $INCLUDE_PATH $BUILD_FILES -o $OUTPUT;
+clang++ -Wall -O3 -arch x86_64 -std=c++14 $R_PATH $LIBS $LIB_PATH $INCLUDE_PATH $BUILD_FILES -o $OUTPUT;

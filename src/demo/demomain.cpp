@@ -6,17 +6,10 @@ int main ( int argc, char const *argv[] )
 {
 	init_application();
 	create_window( "Cocoa Window", 640, 480 );
-
-	set_window_title_bar_hidden( false );
-	set_window_title_hidden( false );
-	set_window_transparency( false );
-	set_window_enable_srgb( true );
-	set_window_background_color( 0.5f, 0.5f, 0.5f, 1.0f );
 	
-	std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << '\n';
-
+	std::cout << " OpenGL Version: " << glGetString(GL_VERSION) << '\n';
 	glEnable( GL_FRAMEBUFFER_SRGB );
-	glClearColor( 0.5f, 0.5f, 0.5f, 0.5f );
+	glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 
 	float rotation = 0;
 	while ( !get_window_is_closing() )

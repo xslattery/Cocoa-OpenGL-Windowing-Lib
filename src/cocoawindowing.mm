@@ -273,12 +273,18 @@ extern "C" void create_window ( const char *title, int width, int height )
 		[s_window setInitialFirstResponder:(NSView *)s_glView]; 
 		[s_window makeFirstResponder:(NSView *)s_glView];
 
+		// Set this at the active context:
+		[[s_glView openGLContext] makeCurrentContext];
+
 		// This enables (1) / disables (0) vsync:
 		// TODO: There is currenely an issue with getting 
 		// vsync to enable / disable correctly.
+		// IF: I can get this to work, I will abstract it away into a toggleable function.
 		int swapInterval = 1; 
-		[[s_glView openGLContext] makeCurrentContext];
 		[[s_glView openGLContext] setValues:&swapInterval forParameter:NSOpenGLCPSwapInterval];
+
+		// Default the background color to white:
+		[s_window setBackgroundColor:[NSColor colorWithRed:1 green:1 blue:1 alpha:1]];
 	}
 	else
 	{
@@ -294,10 +300,19 @@ extern "C" void close_window ()
 {
 	s_windowShouldClose = true;
 	s_windowCreated = false;
-	
+
+	[s_window close];
+
 	// TODO: More may be needed here...
 	// To clean up after the window so 
 	// that a new window can be created.
+
+	// BUG: There is currently a bug where, when the window
+	// is closed and a new one is opened the programs memory
+	// footpring only increases. It appears to be a leak.
+	// I am currently not sure what is causing this.
+	// The only work around I have is to maintain a single window
+	// for the lifetime of the program.
 }
 
 ///////////////////////////////////////
@@ -484,21 +499,33 @@ extern "C" void set_window_fullscreen ( bool state )
 
 ///////////////////////////////////
 extern "C" void set_window_size ( float width, float height )
-{	
-	// TODO:
-	// There is an issue where if the window is in fullscreen spaces it resizes in the space.
-	// Maybe make it so it cant be resized when in fullscreen.
-	float titleBarHeight = [s_window frame].size.height - [[s_window contentView] frame].size.height;
-	NSRect frame = [s_window frame];
-	frame.origin.x = ([[NSScreen mainScreen] frame].size.width - width)/2;
-	frame.origin.y = ([[NSScreen mainScreen] frame].size.height - height)/2;
-	frame.size.width = width;
-	frame.size.height = height + titleBarHeight;
-	[s_window setFrame:frame display:YES animate:YES];
+{
+	if ( !s_windowFullscreen )
+	{
+		float titleBarHeight = [s_window frame].size.height - [[s_window contentView] frame].size.height;
+		NSRect frame = [s_window frame];
+		frame.origin.x = ([[NSScreen mainScreen] frame].size.width - width)/2;
+		frame.origin.y = ([[NSScreen mainScreen] frame].size.height - height)/2;
+		frame.size.width = width;
+		frame.size.height = height + titleBarHeight;
+		[s_window setFrame:frame display:YES animate:YES];
+	}
 }
 
 ///////////////////////////////////
-extern "C" void set_window_enable_srgb ( bool state )
+extern "C" void set_window_position ( float x, float y )
+{
+	if ( !s_windowFullscreen )
+	{
+		NSRect frame = [s_window frame];
+		frame.origin.x = x;
+		frame.origin.y = y;
+		[s_window setFrame:frame display:YES animate:YES];
+	}
+}
+
+///////////////////////////////////
+extern "C" void set_window_background_enable_srgb ( bool state )
 {
 	s_srgbEnabled = state;
 }
@@ -653,4 +680,28 @@ extern "C" float get_window_width ()
 extern "C" float get_window_height ()
 {
 	return static_cast<float>( [s_glView frame].size.height );
+}
+
+///////////////////////////////////
+extern "C" float get_window_hidpi_width ()
+{
+	return static_cast<float>( [s_glView convertRectToBacking:[s_glView bounds]].size.width );
+}
+
+///////////////////////////////////
+extern "C" float get_window_hidpi_height ()
+{
+	return static_cast<float>( [s_glView convertRectToBacking:[s_glView bounds]].size.height );
+}
+
+///////////////////////////////////
+extern "C" float get_screen_width ()
+{
+	return static_cast<float>( [[NSScreen mainScreen] frame].size.width );
+}
+
+///////////////////////////////////
+extern "C" float get_screen_height ()
+{
+	return static_cast<float>( [[NSScreen mainScreen] frame].size.height );
 }
