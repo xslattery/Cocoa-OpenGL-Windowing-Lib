@@ -65,7 +65,9 @@ static unsigned int load_shader ( const std::string& vertexShader, const std::st
 int main ( int argc, char const *argv[] )
 {
 	init_application();
-	create_window( "Cocoa Window", 640, 480 );
+	create_window( "Cocoa Window", 640, 400 );
+
+	set_window_transparency( true );
 	
 	std::cout << "OpenGL Vendor: " << glGetString(GL_VENDOR) << '\n';
 	std::cout << "OpenGL Renderer: " << glGetString(GL_RENDERER) << '\n';
@@ -73,38 +75,48 @@ int main ( int argc, char const *argv[] )
 	std::cout << "OpenGL Shading Language: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << '\n';
 
 	GLCALL( glEnable( GL_FRAMEBUFFER_SRGB ) );
-	GLCALL( glClearColor( 0.5f, 0.5f, 0.5f, 1.0f ) );
+	GLCALL( glEnable( GL_DEPTH_TEST ) );
+	GLCALL( glEnable( GL_CULL_FACE ) );
+	GLCALL( glCullFace( GL_BACK ) );
+
+	GLCALL( glClearColor( 0.1f, 0.1f, 0.15f, 0.8f ) );
 
 	unsigned int shader = load_shader(
 		R"(
 			#version 330 core
 
 			layout(location = 0) in vec4 position;
+			layout(location = 1) in vec4 color;
+
+			out vec4 vertColor;
 
 			void main ()
 			{
 				gl_Position = position;
+				vertColor = color;
 			}
 		)",
 		R"(
 			#version 330 core
 
+			in vec4 vertColor;
+
 			out vec4 color;
 
 			void main ()
 			{
-				color = vec4( 1.0, 0.0, 0.0, 1.0 );
+				color = vertColor;
 			}
 		)"
 	);
 
 	GLCALL( glUseProgram( shader ) );
 
-	float positions [6] =
+	float verts [] =
 	{
-		-0.5f, -0.5f,
-		0.5f, -0.5f,
-		0.0f, 0.5f
+		-0.5f, -0.5f, 	1.0f, 0.0f, 0.0f, 1.0f,
+		0.5f, -0.5f, 	0.0f, 1.0f, 0.0f, 1.0f,
+		0.0f, 0.5f, 	0.0f, 0.0f, 1.0f, 1.0f
 	};
 
 	unsigned int vao;
@@ -114,10 +126,13 @@ int main ( int argc, char const *argv[] )
 	unsigned int vbo;
 	GLCALL( glGenBuffers( 1, &vbo ) );
 	GLCALL( glBindBuffer( GL_ARRAY_BUFFER, vbo ) );
-	GLCALL( glBufferData( GL_ARRAY_BUFFER, 6*sizeof(float), positions, GL_STATIC_DRAW ) );
+	GLCALL( glBufferData( GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW ) );
 
 	GLCALL( glEnableVertexAttribArray( 0 ) );
-	GLCALL( glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, sizeof(float)*2, 0 ) );
+	GLCALL( glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, sizeof(float)*6, 0 ) );
+
+	GLCALL( glEnableVertexAttribArray( 1 ) );
+	GLCALL( glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, sizeof(float)*6, (void*)(sizeof(float)*2) ) );
 
 	while ( !get_window_is_closing() )
 	{

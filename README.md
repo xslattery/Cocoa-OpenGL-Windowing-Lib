@@ -4,6 +4,7 @@
 The purpose of this project is to create a demo & library, which can be used for creating macos / osx OpenGL window's using the native Cocoa API. The primary goal for this project is for it to be usable in C++ projects.
 
 <img src="other/CocoaWindowImage.png" alt="Cocoa Window Image" width="329px" style="width: 329px;"/>
+<img src="other/CocoaWindowImage2.png" alt="Cocoa Window Image" width="329px" style="width: 329px;"/>
 
 ### Dependencies:
 As this project uses Apples API's it is macos / osx dependent. The libraries / frameworks it requires are:
