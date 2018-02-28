@@ -10,10 +10,10 @@ BUILD_FILES="$OBJCPP_FILES";
 
 INCLUDE_PATH="-I ./include";
 
-OBJ_OUTPUT="build/cocoawindowing.o";
+BUILD_OUTPUT_FILES="*.o"
 OUTPUT="build/libcocoawindowing.a";
 
-clang++ -Wall -O3 -arch x86_64 -std="c++14" $INCLUDE_PATH -c $BUILD_FILES -o $OBJ_OUTPUT;
-libtool -static $OBJ_OUTPUT -o $OUTPUT;
+clang++ -Wall -O3 -arch x86_64 -std="c++14" $INCLUDE_PATH -c $BUILD_FILES;
+libtool -static $BUILD_OUTPUT_FILES -o $OUTPUT;
 
-rm $OBJ_OUTPUT;
+rm $BUILD_OUTPUT_FILES;
