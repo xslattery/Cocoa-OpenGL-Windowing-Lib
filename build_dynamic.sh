@@ -3,15 +3,15 @@
 DIR_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
 cd "$DIR_PATH";
 
-mkdir -p build;
+mkdir -p bin;
 
-OBJCPP_FILES="src/*.mm";
-BUILD_FILES="$OBJCPP_FILES";
+BUILD_FILES="src/*.mm";
 
-LIBS="-framework Cocoa";
+LIBS="-framework Cocoa -framework Quartz -framework OpenGL";
 INCLUDE_PATH="-I ./include";
 
-OUTPUT="build/libcocoawindowing.dylib";
-INST_NAME="-install_name @rpath/libcocoawindowing.dylib";
+OUTPUT="-o bin/libcocoawindowing_d.dylib";
+INST_NAME="-install_name @rpath/libcocoawindowing_d.dylib";
+VERSIONS="-compatibility_version 1.0.0 -current_version 1.0.0";
 
-clang++ -Wall -O3 $INST_NAME -dynamiclib -arch x86_64 -std="c++14" $INCLUDE_PATH $LIBS $BUILD_FILES -o $OUTPUT -compatibility_version 1.0.0 -current_version 1.0.0;
+clang++ -arch x86_64 -std=c++14 -Wall -O3 -dynamiclib $INST_NAME $INCLUDE_PATH $LIBS $BUILD_FILES $OUTPUT $VERSIONS;

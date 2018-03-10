@@ -3,17 +3,16 @@
 DIR_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
 cd "$DIR_PATH";
 
-mkdir -p build;
+mkdir -p bin;
 
-OBJCPP_FILES="src/*.mm";
-BUILD_FILES="$OBJCPP_FILES";
-
+BUILD_FILES="src/*.mm";
 INCLUDE_PATH="-I ./include";
+OUTPUT="bin/libcocoawindowing_s.a";
+
+clang++ -arch x86_64 -std=c++14 -Wall -O3 $INCLUDE_PATH -c $BUILD_FILES;
 
 BUILD_OUTPUT_FILES="*.o"
-OUTPUT="build/libcocoawindowing.a";
 
-clang++ -Wall -O3 -arch x86_64 -std="c++14" $INCLUDE_PATH -c $BUILD_FILES;
 libtool -static $BUILD_OUTPUT_FILES -o $OUTPUT;
 
 rm $BUILD_OUTPUT_FILES;
