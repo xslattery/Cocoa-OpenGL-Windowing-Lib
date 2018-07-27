@@ -1,761 +1,723 @@
-//
-// File: cocoawindowing.mm
-// Date: 2018.3.11
-// Creator: Xavier S
-//
-
 #import <Cocoa/Cocoa.h>
+#import <string>
 #import "cocoawindowing.h"
 
-//////////////////////////////
-/////////////////////////////////////////////
-static bool app_inited = false;
-static bool window_created = false;
-static bool temp_only_one_window = false; // NOTE(Xavier): This is a tempoary solution to the problem of not being able to free windows.
-static bool window_fullscreen = false;
-static bool cusror_hidden = false;
-static NSString *working_directory = nullptr;
+//////////////////////////////////////
+// Translation Unit Global Variables:
 
-#define NUM_KEYS 128
-#define NUM_CHAR_KEYS 128
-#define NUM_MOUSE_BUTTONS 8
+// Application Related:
+static std::string s_workingDirectory = "";
+static bool s_applicationInited = false;
 
-static struct {
-	bool active_keys[NUM_KEYS];
-	bool down_keys[NUM_KEYS];
-	bool up_keys[NUM_KEYS];
+// Window & View Related:
+static NSWindow *s_window = nullptr;
+static NSOpenGLView *s_glView = nullptr;
+static bool s_windowCreated = false;
+static bool s_windowShouldClose = true;
+static bool s_windowFullscreen = false;
+static bool s_srgbEnabled = false;
 
-	bool active_char_keys[NUM_CHAR_KEYS];
-	bool down_char_keys[NUM_CHAR_KEYS];
-	bool up_char_keys[NUM_CHAR_KEYS];
+// Input Related:
+// NOTE(Xavier): (2017.11.13) These values will have to 
+// be changed depending on what keys / buttons are supported.
+// NOTE(Xavier): (2017.11.13) KEY_COUNT has been extended to 
+// support arrow keys this is a hacky solution. (The last 4 have
+// been configured for the 4 directions)
+#define KEY_COUNT 132
+#define MBTN_COUNT 3
+#define MOD_KEY_COUNT 4
+static bool s_activeKeys [KEY_COUNT];
+static bool s_downKeys [KEY_COUNT];
+static bool s_upKeys [KEY_COUNT];
+static bool s_modifierActiveKeys [MOD_KEY_COUNT];
+static bool s_activeMouseButtons [MBTN_COUNT];
+static bool s_downMouseButtons [MBTN_COUNT];
+static bool s_upMouseButtons [MBTN_COUNT];
+static float s_mousePositionX = 0;
+static float s_mousePositionY = 0;
+static float s_mouseScrollValueY = 0;
+static float s_mouseScrollValueX = 0;
 
-	bool active_mouse_buttons[NUM_MOUSE_BUTTONS];
-	bool down_mouse_buttons[NUM_MOUSE_BUTTONS];
-	bool up_mouse_buttons[NUM_MOUSE_BUTTONS];
 
-	struct {
-		float x;
-		float y;
-		float scroll_delta_x;
-		float scroll_delta_y;
-	} mouse;
-} input_info;
-
-
-//////////////////////////////
-/////////////////////////////////////////////
-@interface App_Delegate : NSObject <NSApplicationDelegate> {
-
-}
-
+//////////////////////////
+// This is the class for 
+// the application:
+@interface AppDelegate : NSObject<NSApplicationDelegate> {}
 @end
 
-@interface App_Delegate ()
+@implementation AppDelegate
 
-@end
-
-@implementation App_Delegate
-
-- (void) applicationWillFinishLaunching: (NSNotification *)notification {
+- (void) applicationWillFinishLaunching: (NSNotification *)aNotification 
+{
 	id menubar = [[NSMenu new] autorelease];
-		id app_menu_item = [[NSMenuItem new] autorelease];
-			id app_menu = [[NSMenu new] autorelease];
-				id app_name = [[NSProcessInfo processInfo] processName];
-				
-				id quit_title = [@"Quit " stringByAppendingString:app_name];
-				id quit_menu_item = [[[NSMenuItem alloc] initWithTitle:quit_title action:@selector(terminate:) keyEquivalent:@"q"] autorelease];
-				[app_menu addItem:quit_menu_item];
-
-				id close_title = @"Close Window ";
-				id close_menu_item = [[[NSMenuItem alloc] initWithTitle:close_title action:@selector(closeWindow:) keyEquivalent:@"w"] autorelease];
-				[app_menu addItem:close_menu_item];
-
-			[app_menu_item setSubmenu:app_menu];
-		[menubar addItem:app_menu_item];
+	id appMenuItem = [ [ NSMenuItem new ] autorelease];
+	[menubar addItem:appMenuItem];
 	[NSApp setMainMenu:menubar];
-}
+	id appMenu = [[NSMenu new ] autorelease];
+	id appName = [[NSProcessInfo processInfo] processName];
+	id quitTitle = [@"Quit " stringByAppendingString:appName];
+	id quitMenuItem = [[[NSMenuItem alloc] initWithTitle:quitTitle action:@selector(terminate:) keyEquivalent:@"q"] autorelease];
+	[appMenu addItem:quitMenuItem];
+	[appMenuItem setSubmenu:appMenu];
 
-- (void) applicationDidFinishLaunching: (NSNotification *)notification {
 	[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
-	[NSApp activateIgnoringOtherApps:YES];
 }
 
-- (BOOL) applicationShouldTerminateAfterLastWindowClosed: (NSApplication*)sender { return NO; }
-- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender { return NSTerminateNow; }
+- (void) applicationDidFinishLaunching: (NSNotification *)notification { [NSApp activateIgnoringOtherApps:YES]; }
 
-@end
+- (BOOL) applicationShouldTerminateAfterLastWindowClosed: (NSApplication*)sender { return YES; }
 
-
-//////////////////////////////
-/////////////////////////////////////////////
-@interface Window_Controller : NSWindowController {
-
-}
-
-@end
-
-@interface Window_Controller ()
-
-@end
-
-@implementation Window_Controller
-
-@end
-
-
-//////////////////////////////
-/////////////////////////////////////////////
-@interface Window_Delegate : NSWindow <NSWindowDelegate> {
-
-}
-
-@end
-
-@interface Window_Delegate ()
-
-- (IBAction)closeWindow:(id)sender;
-
-@end
-
-@implementation Window_Delegate
-
-- (BOOL) acceptsFirstResponder { return YES; }
-- (BOOL) canBecomeKeyWindow { return YES; }
-- (BOOL) canBecomeMainWindow { return YES; }
-- (void) awakeFromNib { [self makeKeyAndOrderFront:nil]; }
-- (void) becomeKeyWindow { [super becomeKeyWindow]; }
-
-- (NSSize)windowWillResize:(NSWindow *)sender toSize:(NSSize)frameSize {
-	return frameSize;
-}
-
-- (IBAction)closeWindow:(id)sender {
-	[self performClose: sender];
-}
-
-- (BOOL)windowShouldClose:(NSWindow *)sender {	
-	[sender autorelease];
-
-	window_created = false;
-	
-	return YES;
+- (void) applicationWillTerminate: (NSApplication*)sender 
+{ 	
+	s_windowShouldClose = true;
+	s_windowCreated = false;
+	s_applicationInited = false;
 }
 
 @end
 
 
-//////////////////////////////
-/////////////////////////////////////////////
-@interface OpenGL_View : NSOpenGLView {
+//////////////////////////
+// This is the class for 
+// the window:
+@interface WindowDelegate : NSObject<NSWindowDelegate> {}
+@end
 
+@implementation WindowDelegate
+
+// NOTE(Xavier): (2017.11.13) this can be used to set a min / max size or maintain an aspect ratio.
+- (NSSize) windowWillResize: (NSWindow*)window toSize:(NSSize)frameSize { return frameSize; }
+
+- (void) windowWillClose: (id)sender 
+{ 	
+	s_windowShouldClose = true;
+	s_windowCreated = false;
 }
 
 @end
 
-@interface OpenGL_View ()
 
+//////////////////////////////////////
+// This is the class for the windows
+// OpenGL subview:
+@interface OpenGLView : NSOpenGLView {}
 @end
 
-@implementation OpenGL_View
+@implementation OpenGLView
 
-- (BOOL) acceptsFirstResponder { return YES; }
-
-- (id) initWithFrame: (NSRect)frame {
-	// NOTE(Xavier): Keep multisampling attributes at the start of the attribute 
-	// lists since code below assumes they are array elements 0 through 4:
-	unsigned int samples = 0;
-	NSOpenGLPixelFormatAttribute windowedAttrs[] = {
-		NSOpenGLPFAMultisample,
-		NSOpenGLPFASampleBuffers, samples ? 1u : 0,
-		NSOpenGLPFASamples, samples,
-		NSOpenGLPFAAccelerated,
-		NSOpenGLPFADoubleBuffer,
-		NSOpenGLPFAColorSize, 32,
-		NSOpenGLPFADepthSize, 24,
-		NSOpenGLPFAAlphaSize, 8,
-		NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core,
-		0
-	};
-
-	NSOpenGLPixelFormat *pixel_format = [[NSOpenGLPixelFormat alloc] initWithAttributes:windowedAttrs];
-	if (!pixel_format) {
-		bool valid_format = false;
-		while (!pixel_format && samples > 0) {
-			samples /= 2;
-			windowedAttrs[2] = samples ? 1 : 0;
-			windowedAttrs[4] = samples;
-			pixel_format = [[NSOpenGLPixelFormat alloc] initWithAttributes:windowedAttrs];
-			if (pixel_format) {
-				valid_format = true;
-				break;
-			}
-		}
-		
-		if (!valid_format) {
-			NSLog(@"ERROR: OpenGL pixel format not supported.");
-			return nil;
-		}
-	}
-	
-	self = [super initWithFrame:frame pixelFormat:[pixel_format autorelease]];
-
-	[self setWantsBestResolutionOpenGLSurface:YES];
-
-	return self;
+- (id) init 
+{ 
+	self = [super init]; 
+	return self; 
 }
 
-- (void) prepareOpenGL {
-	[super prepareOpenGL];
-		
-	[[self window] setLevel: NSNormalWindowLevel];
-	[[self window] makeKeyAndOrderFront: self];
+- (void) prepareOpenGL 
+{ 
+	[super prepareOpenGL]; 
 	[[self openGLContext] makeCurrentContext];
-	
-	// Vsync On (1) / Off (0):
-	GLint swapInt = 1; 
-	[[self openGLContext] setValues:&swapInt forParameter:NSOpenGLCPSwapInterval];
 }
 
-- (void) drawRect: (NSRect)dirtyRect {
-	[super drawRect:dirtyRect];
+- (void) reshape { [super reshape]; }
+
+- (void) drawRect: (NSRect)bounds 
+{
+	// NOTE(Xavier): (2017.11.13) This is for transparent windows:
+	[[NSColor colorWithCalibratedRed:0 green:0 blue:0 alpha:0] set];
+    NSRectFill( bounds );
 }
 
-- (void) keyDown: (NSEvent*)event {
-	if ([event isARepeat] == NO) {
-		size_t key_code = [event keyCode];		
-		if (key_code < NUM_KEYS) {
-			input_info.active_keys[key_code] = true;
-			input_info.down_keys[key_code] = true;
-			input_info.up_keys[key_code] = false;
-		}
-
-		// NSString *characters = [event charactersIgnoringModifiers];
-		// DEBUG_LOG(characters << ", " << [characters characterAtIndex:0] << ", " << [event keyCode]);
-		// NSLog(characters);
-	}
-}
-
-- (void) keyUp: (NSEvent*)event {
-	size_t key_code = [event keyCode];		
-	if (key_code < NUM_KEYS) {
-		input_info.active_keys[key_code] = false;
-		input_info.down_keys[key_code] = false;
-		input_info.up_keys[key_code] = true;
-	}
-}
-
-- (void)mouseMoved:(NSEvent*)event {
-	NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
-	input_info.mouse.x = point.x;
-	input_info.mouse.y = point.y;
-}
-
-- (void) scrollWheel: (NSEvent*)event {
-	NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
-	input_info.mouse.x = point.x;
-	input_info.mouse.y = point.y;
-	input_info.mouse.scroll_delta_x = [event deltaX];
-	input_info.mouse.scroll_delta_x = [event deltaY];
-}
-
-- (void) mouseDown: (NSEvent*)event {
-	NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
-	input_info.mouse.x = point.x;
-	input_info.mouse.y = point.y;
-	input_info.active_mouse_buttons[0] = true;
-	input_info.down_mouse_buttons[0] = true;
-	input_info.up_mouse_buttons[0] = false;
-}
-
-- (void) mouseUp: (NSEvent*)event {
-	NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
-	input_info.mouse.x = point.x;
-	input_info.mouse.y = point.y;
-	input_info.active_mouse_buttons[0] = false;
-	input_info.down_mouse_buttons[0] = false;
-	input_info.up_mouse_buttons[0] = true;
-}
-
-- (void) rightMouseDown: (NSEvent*)event {
-	NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
-	input_info.mouse.x = point.x;
-	input_info.mouse.y = point.y;
-	input_info.active_mouse_buttons[1] = true;
-	input_info.down_mouse_buttons[1] = true;
-	input_info.up_mouse_buttons[1] = false;
-}
-
-- (void) rightMouseUp: (NSEvent*)event {
-	NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
-	input_info.mouse.x = point.x;
-	input_info.mouse.y = point.y;
-	input_info.active_mouse_buttons[1] = false;
-	input_info.down_mouse_buttons[1] = false;
-	input_info.up_mouse_buttons[1] = true;
-}
-
-- (void) otherMouseDown: (NSEvent*)event {
-	NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
-	input_info.mouse.x = point.x;
-	input_info.mouse.y = point.y;
-	input_info.active_mouse_buttons[2] = true;
-	input_info.down_mouse_buttons[2] = true;
-	input_info.up_mouse_buttons[2] = false;
-}
-
-- (void) otherMouseUp: (NSEvent*)event {
-	NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
-	input_info.mouse.x = point.x;
-	input_info.mouse.y = point.y;
-	input_info.active_mouse_buttons[2] = false;
-	input_info.down_mouse_buttons[2] = false;
-	input_info.up_mouse_buttons[2] = true;
-}
-
-- (void) mouseEntered: (NSEvent*)event {
-	// ...
-}
-
-- (void) mouseExited: (NSEvent*)event {
-	// ...
-}
+// These exist to prevent keys from beeping:
+- (BOOL) acceptsFirstResponder { return YES; }
+- (void) keyDown: (NSEvent *)theEvent {}
 
 @end
 
 
-//////////////////////////////
-/////////////////////////////////////////////
-static Window_Controller *window_controller;
-static Window_Delegate *window_delegate;
-static OpenGL_View *opengl_view;
-
-
-///////////////
-// App:
-extern "C" void app_init () {
-	if (!app_inited) {
-		app_inited = true;
+///////////////////////////////////////
+// This function sets up the NSApp so
+// a NSWindow can be created:
+extern "C" void init_application()
+{
+	if ( !s_applicationInited )
+	{
+		s_applicationInited = true;
 		
+		// Initialize the application:
 		[NSApplication sharedApplication];
 
 		// Set the current working directory:
 		// If using an app bundle, set it to the resources folder.
 		NSFileManager *fileManager = [NSFileManager defaultManager];
-		working_directory = [[NSFileManager defaultManager] currentDirectoryPath];
+		NSString *workingDirectory = [[NSFileManager defaultManager] currentDirectoryPath];
 		
-		NSString *app_bundle_path = [NSString stringWithFormat:@"%@/Contents/Resources", [[NSBundle mainBundle] bundlePath]];
-		if ( [fileManager changeCurrentDirectoryPath:app_bundle_path] == YES ) {
-			working_directory = app_bundle_path;
-		}
+		NSString *appBundlePath = [NSString stringWithFormat:@"%@/Contents/Resources", [[NSBundle mainBundle] bundlePath]];
+		if ( [fileManager changeCurrentDirectoryPath:appBundlePath] == YES ) 
+			workingDirectory = appBundlePath;
+		
+		s_workingDirectory = std::string( (char*)[ workingDirectory UTF8String ] );
 
-		// TODO(Xavier): (2017.11.13) Remove this log:
-		NSLog(@"Working directory: %@\n", working_directory);
+		// TODO(Xavier): (2017.11.13) Remove this printf:
+		printf( "Working directory: %s\n", s_workingDirectory.c_str() );
 
 		// Assign the Application Delegate:
-		[NSApp setDelegate:[[App_Delegate alloc] init]];
+		[NSApp setDelegate:[[AppDelegate alloc] init]];
 		[NSApp finishLaunching];
 	}
-	else {
-		// TODO(Xavier): This should result in some better form of warning / static assert.
-		NSLog(@"The application has already been initalised.\n");
+	else
+	{
+		// TODO(Xavier): (2017.11.13) This should result in some better form of warning / static assert.
+		printf( "The application has already been initalised.\n" );
 	}
 }
 
-extern "C" void app_quit () {
-	// TODO(Xavier)
+/////////////////////////////////////////
+// This function will close the 
+// application and all related windows:
+extern "C" void close_application ()
+{
+	close_window();
+	s_applicationInited = false;
+	
+	// TODO(Xavier): (2017.11.13) Implement this...
+	// More is needed to clean up
+	// so that the application can be re-inited.
 }
 
+////////////////////////////////
+// This function will create a 
+// OpenGL capable window:
+extern "C" void create_window ( const char *title, int width, int height )
+{
+	if ( !s_windowCreated )
+	{
+		s_windowCreated = true;
+		s_windowShouldClose = false;
 
-///////////////
-// Screen:
-extern "C" int screen_get_width () {
-	return [[NSScreen mainScreen] frame].size.width;
-}
+		// Create the main window and the content view:
+		float windowWidth = (float)width;
+		float windowHeight = (float)height;
+		NSRect screenRect = [[NSScreen mainScreen] frame];
+		NSRect windowFrame = NSMakeRect(( screenRect.size.width - windowWidth ) * 0.5f, 
+										( screenRect.size.height - windowHeight ) * 0.5f, 
+										windowWidth, windowHeight);
+		
+		NSWindowStyleMask windowStyleMask = NSWindowStyleMaskClosable | 
+											NSWindowStyleMaskTitled |
+											NSWindowStyleMaskMiniaturizable |
+											// NSWindowStyleMaskFullSizeContentView | // For some reason this affects VSync??
+											NSWindowStyleMaskResizable;
 
-extern "C" int screen_get_height () {
-	return [[NSScreen mainScreen] frame].size.height;
-}
+		s_window = [[NSWindow alloc] initWithContentRect:windowFrame styleMask:windowStyleMask backing:NSBackingStoreBuffered defer:NO];
 
-extern "C" void screen_get_size ( int *x, int *y ) {
-	*x = [[NSScreen mainScreen] frame].size.width;
-	*y = [[NSScreen mainScreen] frame].size.height;
-}
+		[s_window setDelegate:[[WindowDelegate alloc] init]];
+		[s_window setTitle:[NSString stringWithUTF8String:title]];
+		[s_window makeKeyAndOrderFront:nil];
 
+		// This array defines what we want our pixel format to be like:
+		NSOpenGLPixelFormatAttribute openGLAttributes [] = 
+		{
+			NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core,
+			NSOpenGLPFAAccelerated,
+			NSOpenGLPFADoubleBuffer,
+			NSOpenGLPFAColorSize, 24,
+			NSOpenGLPFAAlphaSize, 8,
+			NSOpenGLPFADepthSize, 24,
+			0
+		};
 
-///////////////
-// Window:
-extern "C" void window_create ( const char *title, int width, int height ) {
-	if (!window_created && !temp_only_one_window) {
-		window_created = true;
-		temp_only_one_window = true;
+		// Create a pixel format & gl context based off our chosen attributes:
+		NSOpenGLPixelFormat *pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:openGLAttributes];
+		NSOpenGLContext *openglContext = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:nil];
 
-		NSRect screen_rect = [[NSScreen mainScreen] frame];
-		NSRect view_rect = NSMakeRect(0, 0, width, height);
-		NSRect window_rect = NSMakeRect( NSMidX(screen_rect) - NSMidX(view_rect), NSMidY(screen_rect) - NSMidY(view_rect), view_rect.size.width, view_rect.size.height );
+		// Set some properties for the windows main view:
+		[[s_window contentView] setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+		[[s_window contentView] setAutoresizesSubviews:YES];
 
-		NSUInteger window_style = NSWindowStyleMaskTitled  | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable; 
-		window_delegate = [[Window_Delegate alloc] initWithContentRect:window_rect styleMask:window_style backing:NSBackingStoreBuffered defer:NO]; 
-		[window_delegate autorelease];
-
-		// NOTE(Xavier): Hide title bar texture & set color:
-		[window_delegate setBackgroundColor:[NSColor colorWithRed:0.2148 green:0.2148 blue:0.2539 alpha:1]];
-		window_delegate.titlebarAppearsTransparent = true;
-		window_delegate.titleVisibility = NSWindowTitleHidden;
-
-		// NOTE(Xavier): Here you could instead load the window from a nib file.
-		window_controller = [[Window_Controller alloc] initWithWindow:window_delegate]; 
-		[window_controller autorelease];
-
-		opengl_view = [[[OpenGL_View alloc] initWithFrame:window_rect] autorelease];
-		[window_delegate setContentView:opengl_view];
-
-		[window_delegate setAcceptsMouseMovedEvents:YES];
-		[window_delegate setTitle:[[NSProcessInfo processInfo] processName]];
-		[window_delegate setCollectionBehavior: NSWindowCollectionBehaviorFullScreenPrimary];
-		[window_delegate orderFrontRegardless];
+		// Create an OpenGL View: 
+		s_glView = [[OpenGLView alloc] init];
+		[s_glView setPixelFormat:pixelFormat];
+		[pixelFormat release]; // TODO(Xavier): (2017.11.13) Should this be done?
+		[s_glView setOpenGLContext:openglContext];
+		// NOTE(Xavier): (2017.11.13) This can be set to a custom CGRect to make the view
+		// only take up a portion or the window.
+		[s_glView setFrame:[[s_window contentView] bounds]];
+		[s_glView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+		[s_glView setWantsBestResolutionOpenGLSurface:YES];
+		[[s_glView openGLContext] setView:s_glView];
+		// Subview it to the windows main view:
+		[[s_window contentView] addSubview:s_glView];
 		
 		// This is done to prevent keys from beeping:
-		[window_delegate setInitialFirstResponder:(NSView *)opengl_view]; 
-		[window_delegate makeFirstResponder:(NSView *)opengl_view];
+		[s_window setInitialFirstResponder:(NSView *)s_glView]; 
+		[s_window makeFirstResponder:(NSView *)s_glView];
 
 		// Set this at the active context:
-		[[opengl_view openGLContext] makeCurrentContext];
+		[[s_glView openGLContext] makeCurrentContext];
+
+		// This enables (1) / disables (0) vsync:
+		// TODO(Xavier): (2017.11.13) There is currenely an issue with getting 
+		// vsync to enable / disable correctly.
+		// IF: I can get this to work, I will abstract it away into a toggleable function.
+		int swapInterval = 1; 
+		[[s_glView openGLContext] setValues:&swapInterval forParameter:NSOpenGLCPSwapInterval];
+
+		// Default the background color to white:
+		[s_window setBackgroundColor:[NSColor colorWithRed:1 green:1 blue:1 alpha:1]];
 	}
-	else {
-		// TODO(Xavier): This should result in some better form of warning / static assert.
-		NSLog(@"A window has already been created.\n");
+	else
+	{
+		// TODO(Xavier): (2017.11.13) This should result in some better form of warning / static assert.
+		printf( "A window has already been created.\n" );
 	}
 }
 
-extern "C" void window_close () {
-	[window_delegate performClose: window_delegate];
+/////////////////////////////////
+// This function will close the
+// active window:
+extern "C" void close_window ()
+{
+	s_windowShouldClose = true;
+	s_windowCreated = false;
+
+	[s_window close];
+
+	// TODO(Xavier): (2017.11.13) More may be needed here...
+	// To clean up after the window so 
+	// that a new window can be created.
+
+	// BUG(Xavier): (2017.11.13) There is currently a bug where, when the window
+	// is closed and a new one is opened the programs memory
+	// footpring only increases. It appears to be a leak.
+	// I am currently not sure what is causing this.
+	// The only work around I have is to maintain a single window
+	// for the lifetime of the program.
 }
 
-extern "C" void window_process_events () {
-	for (size_t i = 0; i < NUM_KEYS; ++i) {
-		input_info.down_keys[i] = false;
-		input_info.up_keys[i] = false;
+///////////////////////////////////////
+// This function will process all
+// input / events and store them to
+// be accessed by other functions:
+extern "C" void process_window_events ()
+{
+	for ( size_t k = 0; k < KEY_COUNT; ++k )
+	{
+		s_downKeys[k] = false;
+		s_upKeys[k] = false;
 	}
 
-	for (size_t i = 0; i < NUM_CHAR_KEYS; ++i) {
-		input_info.down_char_keys[i] = false;
-		input_info.up_char_keys[i] = false;
-	}
-	
-	for (size_t i = 0; i < NUM_MOUSE_BUTTONS; ++i) {
-		input_info.down_mouse_buttons[i] = false;
-		input_info.up_mouse_buttons[i] = false;
+	for ( size_t b = 0; b < MBTN_COUNT; ++b )
+	{
+		s_downMouseButtons[b] = false;
+		s_upMouseButtons[b] = false;
 	}
 
-	NSEvent *event;
+	for ( size_t m = 0; m < MOD_KEY_COUNT; ++m )
+	{
+		s_modifierActiveKeys[m] = false;
+	}
+
+	NSEvent* event;
 	do {
 		event = [NSApp nextEventMatchingMask:NSEventMaskAny untilDate:nil inMode:NSDefaultRunLoopMode dequeue:YES];
-		switch ([event type]) {
-			default: {
+		
+		switch ( [event type] ) {
+			
+			case NSEventTypeKeyDown: 
+			{
+				size_t modifierFlags = [event modifierFlags];
+				size_t commandKeyFlag = modifierFlags & NSEventModifierFlagCommand;
+				size_t controlKeyFlag = modifierFlags & NSEventModifierFlagControl;
+				size_t optionKeyFlag = modifierFlags & NSEventModifierFlagOption;
+				size_t shiftKeyFlag = modifierFlags & NSEventModifierFlagShift;
+				if ( commandKeyFlag ) s_modifierActiveKeys[ModifierKeys::COMMAND] = true;
+				if ( controlKeyFlag ) s_modifierActiveKeys[ModifierKeys::OPTION] = true;
+				if ( optionKeyFlag ) s_modifierActiveKeys[ModifierKeys::CONTROL] = true;
+				if ( shiftKeyFlag ) s_modifierActiveKeys[ModifierKeys::SHIFT] = true;
+
+				size_t c = [[event charactersIgnoringModifiers] characterAtIndex:0];
+				if ( c < KEY_COUNT )
+				{
+					if ( c >= 'A' && c <= 'Z' ) c += 32; // NOTE(Xavier): (2017.11.13) Makes caps & non-caps the same
+					if ( c == 25 ) c = Keys::KEY_TAB; // NOTE(Xavier): (2017.11.13) Fixes tab when shift is pressed.
+					if ( !s_activeKeys[c] ) s_downKeys[c] = true;
+					s_activeKeys[c] = true;
+				}
+
+				// NOTE(Xavier): (2017.11.13) This is a hacky solution to allow for arrow keys:
+				if ( c >= Keys::KEY_UP && c <= Keys::KEY_RIGHT )
+				{
+					c -= 63104;
+					if ( !s_activeKeys[c] ) s_downKeys[c] = true;
+					s_activeKeys[c] = true;
+				}
+
+				[NSApp sendEvent:event]; 
+			} break;
+			
+			case NSEventTypeKeyUp: 
+			{	
+				int modifierFlags = [event modifierFlags];
+				int commandKeyFlag = modifierFlags & NSEventModifierFlagCommand;
+				int controlKeyFlag = modifierFlags & NSEventModifierFlagControl;
+				int optionKeyFlag = modifierFlags & NSEventModifierFlagOption;
+				int shiftKeyFlag = modifierFlags & NSEventModifierFlagShift;
+				if ( commandKeyFlag ) s_modifierActiveKeys[ModifierKeys::COMMAND] = false;
+				if ( controlKeyFlag ) s_modifierActiveKeys[ModifierKeys::OPTION] = false;
+				if ( optionKeyFlag ) s_modifierActiveKeys[ModifierKeys::CONTROL] = false;
+				if ( shiftKeyFlag ) s_modifierActiveKeys[ModifierKeys::SHIFT] = false;				
+
+				size_t c = [[event charactersIgnoringModifiers] characterAtIndex:0];
+				if ( c < KEY_COUNT )
+				{
+					if ( c >= 'A' && c <= 'Z' ) c += 32; // NOTE(Xavier): (2017.11.13) Makes caps & non-caps the same
+					if ( c == 25 ) c = Keys::KEY_TAB; // NOTE(Xavier): (2017.11.13) Fixes tab when shift is pressed.
+					s_activeKeys[c] = false;
+					s_upKeys[c] = true;
+				}
+
+				// NOTE(Xavier): (2017.11.13) This is a hacky solution to allow for arrow keys:
+				if ( c >= Keys::KEY_UP && c <= Keys::KEY_RIGHT )
+				{
+					c -= 63104;
+					s_activeKeys[c] = false;
+					s_upKeys[c] = true;
+				}
+
 				[NSApp sendEvent:event];
 			} break;
+			
+			case NSEventTypeScrollWheel: 
+			{
+				s_mouseScrollValueY = static_cast<float>([event scrollingDeltaY]);
+				s_mouseScrollValueX = static_cast<float>([event scrollingDeltaX]);
+
+				[NSApp sendEvent:event];
+			} break;
+			
+			default: { [NSApp sendEvent:event]; } break;
 		}
-	} while (event != nil);
-}
 
-extern "C" void window_draw () {
-	[[opengl_view openGLContext] flushBuffer];
-}
+	} while ( event != nil );
 
-
-extern "C" bool window_get_is_closed () {
-	return !window_created;
-}
-
-
-extern "C" void window_set_cursor_hidden ( bool state ) {
-	if (!cusror_hidden && state) {
-		cusror_hidden = true;
-		[NSCursor hide];
-	}
-	else if (cusror_hidden && !state) {
-		[NSCursor unhide];
-	}
-}
-
-extern "C" bool window_get_cursor_hidden () {
-	return cusror_hidden;
-}
-
-
-extern "C" bool window_get_fullscreen () {
-	return window_fullscreen;
-}
-
-extern "C" void window_set_fullscreen ( bool state ) {
-	if (!opengl_view.inFullScreenMode) {
-		if ( state && !window_fullscreen ) { [window_delegate toggleFullScreen:nil]; window_fullscreen = true; }
-		else if ( !state && window_fullscreen ) { [window_delegate toggleFullScreen:nil]; window_fullscreen = false; }
+	// Mouse Position:
+	NSPoint mouseLocationOnScreen = [NSEvent mouseLocation];
+	NSRect windowRect = [s_window convertRectFromScreen:NSMakeRect( mouseLocationOnScreen.x, mouseLocationOnScreen.y, 1, 1 )];
+	NSPoint pointInWindow = windowRect.origin;	
+	NSPoint mouseLocationInView = [s_glView convertPoint:pointInWindow fromView:nil];
+	s_mousePositionX = static_cast<float>( mouseLocationInView.x );
+	s_mousePositionY = static_cast<float>( [s_glView frame].size.height - mouseLocationInView.y );
+	
+	// Mouse Buttons:
+	size_t mouseButtonMask = [NSEvent pressedMouseButtons];
+	for ( size_t m = 0; m < MBTN_COUNT; ++m )
+	{
+		if ( mouseButtonMask & (1 << m) )
+		{
+			if ( !s_activeMouseButtons[m] ) s_downMouseButtons[m] = true;
+			s_activeMouseButtons[m] = true;
+		}
+		else if ( !(mouseButtonMask & (1 << m) ) && s_activeMouseButtons[m] )
+		{
+			s_activeMouseButtons[m] = false;
+			s_upMouseButtons[m] = true;
+		}
 	}
 }
 
-
-extern "C" bool window_get_complete_fullscreen () {
-	return opengl_view.inFullScreenMode;
+/////////////////////////////////////
+// This function will display the
+// OpenGL draw calls to the window:
+extern "C" void refresh_window () 
+{ 
+	[[s_glView openGLContext] flushBuffer]; 
 }
 
-extern "C" void window_set_complete_fullscreen ( bool state ) {
-	if (state && !opengl_view.inFullScreenMode) {
-		if (!opengl_view.inFullScreenMode) [opengl_view enterFullScreenMode:[NSScreen mainScreen] withOptions:nil];
+
+////////////////////////////////////////
+// This function can be used
+// to set the visibility of the cursor:
+extern "C" void set_cursor_hidden ( bool state )
+{	
+	if ( state ) [NSCursor hide];
+	else [NSCursor unhide];
+}
+
+///////////////////////////////////////////////////////////////////////////
+// This function will make the OpenGLView enter complete fullscreen
+// by making the NSView the full screen size & on top of everything else.
+// NOTE(Xavier): (2017.11.13) App switching will not work while in fullscreen.
+// Because of this, set_window_fullscreen() is recomended instead.
+extern "C" void set_window_complete_fullscreen ( bool state )
+{
+	if ( state && !s_glView.inFullScreenMode )
+	{
+		if ( !s_glView.inFullScreenMode )
+			[s_glView enterFullScreenMode:[NSScreen mainScreen] withOptions:nil];
 	}
-	else if (!state && opengl_view.inFullScreenMode) {
-		[opengl_view exitFullScreenModeWithOptions:nil];
-		[window_delegate makeKeyAndOrderFront:nil];
+	else if ( !state && s_glView.inFullScreenMode )
+	{
+		[s_glView exitFullScreenModeWithOptions:nil];
+		[s_window makeKeyAndOrderFront:nil];
 
 		// This is done to prevent keys from beeping:
-		[window_delegate setInitialFirstResponder:(NSView *)opengl_view]; 
-		[window_delegate makeFirstResponder:(NSView *)opengl_view];
+		[s_window setInitialFirstResponder:(NSView *)s_glView]; 
+		[s_window makeFirstResponder:(NSView *)s_glView];
 	}
 }
 
-
-extern "C" int window_get_width () {
-	return [opengl_view bounds].size.width;
+/////////////////////////////////////////////////////////////
+// This function will move the window
+// into a new fullscreen space or exit from one.
+// NOTE(Xavier): (2017.11.13) This is the prefered method to set_window_complete_fullscreen()
+extern "C" void set_window_fullscreen ( bool state )
+{
+	if ( state && !s_windowFullscreen ) { [s_window toggleFullScreen:nil]; s_windowFullscreen = true; }
+	else if ( !state && s_windowFullscreen ) { [s_window toggleFullScreen:nil]; s_windowFullscreen = false; }
 }
 
-extern "C" int window_get_height () {
-	return [opengl_view bounds].size.height;
-}
-
-extern "C" void window_get_size ( int *width, int *height ) {
-	*width = [opengl_view bounds].size.width;
-	*height = [opengl_view bounds].size.height;
-}
-
-extern "C" void window_set_size ( int width, int height ) {
-	if (!window_fullscreen && !opengl_view.inFullScreenMode) {
+/////////////////////////////////////
+// This sets the size of the window:
+extern "C" void set_window_size ( float width, float height )
+{
+	if ( !s_windowFullscreen )
+	{
 		// NOTE(Xavier): (2017.11.13) The title bar had to be taken into account.
 		// For some reason, this it different to when the window is first created.
-		float titleBarHeight = [window_delegate frame].size.height - [[window_delegate contentView] frame].size.height;
-		NSRect frame = [window_delegate frame];
-		frame.origin.x = ([[NSScreen mainScreen] frame].size.width - width) / 2;
-		frame.origin.y = ([[NSScreen mainScreen] frame].size.height - height) / 2;
+		float titleBarHeight = [s_window frame].size.height - [[s_window contentView] frame].size.height;
+		NSRect frame = [s_window frame];
+		frame.origin.x = ([[NSScreen mainScreen] frame].size.width - width)/2;
+		frame.origin.y = ([[NSScreen mainScreen] frame].size.height - height)/2;
 		frame.size.width = width;
 		frame.size.height = height + titleBarHeight;
-		[window_delegate setFrame:frame display:YES animate:YES];
+		[s_window setFrame:frame display:YES animate:YES];
 	}
 }
 
-
-extern "C" int window_get_width_hidpi () {
-	return [opengl_view convertRectToBacking:[opengl_view bounds]].size.width;
-}
-
-extern "C" int window_get_height_hidpi () {
-	return [opengl_view convertRectToBacking:[opengl_view bounds]].size.height;
-}
-
-extern "C" void window_get_size_hidpi ( int *width, int *height ) {
-	*width = [opengl_view convertRectToBacking:[opengl_view bounds]].size.width;
-	*height = [opengl_view convertRectToBacking:[opengl_view bounds]].size.height;
-}
-
-extern "C" int window_get_x () {
-	return [window_delegate frame].origin.x;
-}
-
-extern "C" int window_get_y () {
-	return [window_delegate frame].origin.y;
-}
-
-extern "C" void window_get_position ( int *x, int *y ) {
-	*x = [window_delegate frame].origin.x;
-	*y = [window_delegate frame].origin.y;
-}
-
-extern "C" void window_set_position ( int x, int y ) {
-	if (!window_fullscreen) {
-		NSRect frame = [window_delegate frame];
+///////////////////////////////////
+extern "C" void set_window_position ( float x, float y )
+{
+	if ( !s_windowFullscreen )
+	{
+		NSRect frame = [s_window frame];
 		frame.origin.x = x;
 		frame.origin.y = y;
-		[window_delegate setFrame:frame display:YES animate:YES];
+		[s_window setFrame:frame display:YES animate:YES];
 	}
 }
 
-
-extern "C" void window_set_title_hidden ( bool state ) {
-	// TODO(Xavier)
+////////////////////////////////////////////////////////////
+// NOTE(Xavier): (2017.11.13) This should be called before 
+// 'set_window_background_color' or it will not be applied to the background.
+extern "C" void set_window_background_enable_srgb ( bool state )
+{
+	s_srgbEnabled = state;
 }
 
-extern "C" void window_set_title_bar_transparent ( bool state ) {
-	// TODO(Xavier)
+////////////////////////////////////////////////////////////
+// This function sets the background color of the widow:
+// This is imporant when the titlebar is hidden, because it
+// will be the color that displays in place of the titlebar texture.
+// NOTE(Xavier): (2017.11.13) If srgb colors are wanted it needs to be
+// enabled before this function is called.
+extern "C" void set_window_background_color ( float r, float g, float b, float a )
+{
+	auto to_srgb = []( float v ) -> float
+	{
+		if ( v <= 0.0031308 ) return v * 12.92;
+		else return 1.055 * pow(v, 1.0/2.4) - 0.055;
+	};
+
+	if ( s_srgbEnabled ) [s_window setBackgroundColor:[NSColor colorWithRed:to_srgb(r) green:to_srgb(g) blue:to_srgb(b) alpha:a]];
+	else [s_window setBackgroundColor:[NSColor colorWithRed:r green:g blue:b alpha:a]];
 }
 
-extern "C" void window_set_background_srgb ( bool state ) {
-	// TODO(Xavier)
+///////////////////////////////////
+// Hides the title bar:
+extern "C" void set_window_title_bar_hidden ( bool state )
+{
+	if ( state ) s_window.titlebarAppearsTransparent = true;
 }
 
-extern "C" void window_set_background_color ( float r, float g, float b, float a ) {
-	// TODO(Xavier)
+///////////////////////////////////
+// Hides title bar text:
+extern "C" void set_window_title_hidden ( bool state )
+{
+	if ( state ) s_window.titleVisibility = NSWindowTitleHidden;
 }
 
-extern "C" void window_set_transparent ( bool state ) {
-	// TODO(Xavier)
-}
-
-
-///////////////
-// Input:
-extern "C" bool input_get_key ( Key key ) {
-	if (static_cast<size_t>(key) >= NUM_KEYS) { return false; }
-	if (input_info.active_keys[static_cast<size_t>(key)]) { return true; }
-	return false;
-}
-
-extern "C" bool input_get_key_down ( Key key ) {
-	if (static_cast<size_t>(key) >= NUM_KEYS) { return false; }
-	if (input_info.down_keys[static_cast<size_t>(key)]) { return true; }
-	return false;
-}
-
-extern "C" bool input_get_key_up ( Key key ) {
-	if (static_cast<size_t>(key) >= NUM_KEYS) { return false; }
-	if (input_info.up_keys[static_cast<size_t>(key)]) { return true; }
-	return false;
+//////////////////////////////////////////////////
+// Enables transparency for the view and window:
+extern "C" void set_window_transparency ( bool state )
+{
+	int transparent = !state;
+    [[s_glView openGLContext] setValues:&transparent forParameter:NSOpenGLCPSurfaceOpacity];
+	[s_window setOpaque:(state == true ? NO : YES)];
 }
 
 
-extern "C" bool input_get_any_key () {
-	for (size_t i = 0; i < NUM_KEYS; ++i) {
-		if (input_info.active_keys[i]) return true;
-	}
-	return false;
-}
-
-extern "C" bool input_get_any_key_down () {
-	for (size_t i = 0; i < NUM_KEYS; ++i) {
-		if (input_info.down_keys[i]) return true;
-	}
-	return false;
-}
-
-extern "C" bool input_get_any_key_up () {
-	for (size_t i = 0; i < NUM_KEYS; ++i) {
-		if (input_info.up_keys[i]) return true;
+///////////////////////////////////
+extern "C" bool get_key ( size_t keyCode )
+{
+	if ( keyCode < KEY_COUNT )
+	{
+		if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE(Xavier): (2017.11.13) Makes caps & non-caps the same
+		if ( keyCode >= Keys::KEY_UP && keyCode <= Keys::KEY_RIGHT ) keyCode -= 63104; // NOTE(Xavier): (2017.11.13) Hacky fix for arrow keys.
+		return s_activeKeys[keyCode];
 	}
 	return false;
 }
 
-
-extern "C" bool input_get_char ( char key ) {
-	return false; // TODO(Xavier)
-}
-
-extern "C" bool input_get_char_down ( char key ) {
-	return false; // TODO(Xavier)
-}
-
-extern "C" bool input_get_char_up ( char key ) {
-	return false; // TODO(Xavier)
-}
-
-
-extern "C" bool input_get_mouse ( Mouse button ) {
-	if (static_cast<size_t>(button) >= NUM_MOUSE_BUTTONS) { return false; }
-	if (input_info.active_mouse_buttons[static_cast<size_t>(button)]) { return true; }
+///////////////////////////////////
+extern "C" bool get_key_down ( size_t keyCode )
+{
+	if ( keyCode < KEY_COUNT )
+	{
+		if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE(Xavier): (2017.11.13) Makes caps & non-caps the same
+		if ( keyCode >= Keys::KEY_UP && keyCode <= Keys::KEY_RIGHT ) keyCode -= 63104; // NOTE(Xavier): (2017.11.13) Hacky fix for arrow keys.
+		return s_downKeys[keyCode];
+	}
 	return false;
 }
 
-extern "C" bool input_get_mouse_down ( Mouse button ) {
-	if (static_cast<size_t>(button) >= NUM_MOUSE_BUTTONS) { return false; }
-	if (input_info.down_mouse_buttons[static_cast<size_t>(button)]) { return true; }
+///////////////////////////////////
+extern "C" bool get_key_up ( size_t keyCode )
+{
+	if ( keyCode < KEY_COUNT )
+	{
+		if ( keyCode >= 65 && keyCode <= 90 ) keyCode += 32; // NOTE(Xavier): (2017.11.13) Makes caps & non-caps the same
+		if ( keyCode >= Keys::KEY_UP && keyCode <= Keys::KEY_RIGHT ) keyCode -= 63104; // NOTE(Xavier): (2017.11.13) Hacky fix for arrow keys.
+		return s_upKeys[keyCode];
+	}
 	return false;
 }
 
-extern "C" bool input_get_mouse_up ( Mouse button ) {
-	if (static_cast<size_t>(button) >= NUM_MOUSE_BUTTONS) { return false; }
-	if (input_info.up_mouse_buttons[static_cast<size_t>(button)]) { return true; }
+///////////////////////////////////
+extern "C" bool get_modifier_key ( size_t keyCode )
+{
+	if ( keyCode < MOD_KEY_COUNT )
+	{
+		return s_modifierActiveKeys[keyCode];
+	}
 	return false;
 }
 
-
-extern "C" bool input_get_mouse_num ( int button ) {
-	if (button >= NUM_MOUSE_BUTTONS) { return false; }
-	if (input_info.active_mouse_buttons[button]) { return true; }
+///////////////////////////////////
+extern "C" bool get_mouse_button ( size_t button )
+{
+	if ( button < MBTN_COUNT )
+	{
+		return s_activeMouseButtons[button];
+	}
 	return false;
 }
 
-extern "C" bool input_get_mouse_num_down ( int button ) {
-	if (button >= NUM_MOUSE_BUTTONS) { return false; }
-	if (input_info.down_mouse_buttons[button]) { return true; }
+///////////////////////////////////
+extern "C" bool get_mouse_button_down ( size_t button )
+{
+	if ( button < MBTN_COUNT )
+	{
+		return s_downMouseButtons[button];
+	}
 	return false;
 }
 
-extern "C" bool input_get_mouse_num_up ( int button ) {
-	if (button >= NUM_MOUSE_BUTTONS) { return false; }
-	if (input_info.up_mouse_buttons[button]) { return true; }
+///////////////////////////////////
+extern "C" bool get_mouse_button_up ( size_t button )
+{
+	if ( button < MBTN_COUNT )
+	{
+		return s_upMouseButtons[button];
+	}
 	return false;
 }
 
-
-extern "C" int input_get_mouse_x () {
-	return input_info.mouse.x;
+///////////////////////////////////
+extern "C" float get_mouse_position_x ()
+{
+	return s_mousePositionX;
 }
 
-extern "C" int input_get_mouse_y () {
-	return input_info.mouse.y;
+///////////////////////////////////
+extern "C" float get_mouse_position_y ()
+{
+	return s_mousePositionY;
 }
 
-extern "C" void input_get_mouse_position ( int *x, int *y ) {
-	*x = input_info.mouse.x;
-	*y = input_info.mouse.y;
+///////////////////////////////////
+extern "C" float get_mouse_scroll_y ()
+{
+	return s_mouseScrollValueY;
+}
+
+///////////////////////////////////
+extern "C" float get_mouse_scroll_x ()
+{
+	return s_mouseScrollValueX;
+}
+
+///////////////////////////////////
+extern "C" bool get_window_is_closing ()
+{
+	return s_windowShouldClose;
+}
+
+///////////////////////////////////
+extern "C" float get_window_width ()
+{
+	return static_cast<float>( [s_glView frame].size.width );
+}
+
+///////////////////////////////////
+extern "C" float get_window_height ()
+{
+	return static_cast<float>( [s_glView frame].size.height );
+}
+
+///////////////////////////////////
+extern "C" float get_window_hidpi_width ()
+{
+	return static_cast<float>( [s_glView convertRectToBacking:[s_glView bounds]].size.width );
+}
+
+///////////////////////////////////
+extern "C" float get_window_hidpi_height ()
+{
+	return static_cast<float>( [s_glView convertRectToBacking:[s_glView bounds]].size.height );
+}
+
+///////////////////////////////////
+extern "C" float get_screen_width ()
+{
+	return static_cast<float>( [[NSScreen mainScreen] frame].size.width );
+}
+
+///////////////////////////////////
+extern "C" float get_screen_height ()
+{
+	return static_cast<float>( [[NSScreen mainScreen] frame].size.height );
 }
 
 
-extern "C" int input_get_mouse_x_hidpi () {
-	NSRect point;
-	point.size.width = input_info.mouse.x;
-	point.size.height = input_info.mouse.y;
-	return [opengl_view convertRectToBacking:point].size.width;
-}
+//////////////////////////////////////////////////
+// NOTE(Xavier): (2017.11.13) This function will 
+// return a nullptr if there are any errors.
+// IF: The program is not in an app bundle, the passed
+// name will be used.
+extern "C" const char* get_application_support_directory ( const char *appName )
+{	
+	NSString *bundleID = [[NSBundle mainBundle] bundleIdentifier];
+	if ( bundleID == nil && appName == nullptr ) return nullptr;
+	else bundleID = [NSString stringWithUTF8String:appName];
 
-extern "C" int input_get_mouse_y_hidpi () {
-	NSRect point;
-	point.size.width = input_info.mouse.x;
-	point.size.height = input_info.mouse.y;
-	return [opengl_view convertRectToBacking:point].size.height;
-}
-
-extern "C" void input_get_mouse_position_hidpi ( int *x, int *y ) {
-	NSRect point;
-	point.size.width = input_info.mouse.x;
-	point.size.height = input_info.mouse.y;
-	point = [opengl_view convertRectToBacking:point];
-	*x = point.size.width;
-	*y = point.size.height;
-}
-
-
-extern "C" float input_get_scroll_delta_x () {
-	return input_info.mouse.scroll_delta_x;
-}
-
-extern "C" float input_get_scroll_delta_y () {
-	return input_info.mouse.scroll_delta_y;
-}
-
-extern "C" void input_get_scroll_delta ( float *x, float *y) {
-	*x = input_info.mouse.scroll_delta_x;
-	*y = input_info.mouse.scroll_delta_y;
-}
-
-
-///////////////
-// Util:
-extern "C" const char* util_get_application_support_directory ( const char *appName ) {
-	NSString *bundleID = [NSString stringWithUTF8String:appName];
 	NSFileManager *fm = [NSFileManager defaultManager];
 	NSURL *dirPath = nil;
 	NSArray *appSupportDir = [fm URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask];
-	if ([appSupportDir count] > 0) {
+	if ( [appSupportDir count] > 0 )
+	{
 		dirPath = [[appSupportDir objectAtIndex:0] URLByAppendingPathComponent:bundleID];
 		NSError *theError = nil;
-		if (![fm createDirectoryAtURL:dirPath withIntermediateDirectories:YES attributes:nil error:&theError]) {
+		if ( ![fm createDirectoryAtURL:dirPath withIntermediateDirectories:YES attributes:nil error:&theError] )
+		{
 			return nullptr;
 		}
 	}
@@ -764,22 +726,17 @@ extern "C" const char* util_get_application_support_directory ( const char *appN
 	return (const char*)[[dirPath.path stringByAppendingString:@"/"] UTF8String];
 }
 
-extern "C" const char* util_get_executable_directory () {
-	return ""; // TODO(Xavier)
-}
-
-extern "C" const char* util_get_resource_directory () {
-	return ""; // TODO(Xavier)
-}
-
-
-extern "C" void util_create_directory_at ( const char* dir ) {
+///////////////////////////////////
+extern "C" void create_directory_at ( const char* dir )
+{
 	NSString *directory = [NSString stringWithUTF8String:dir];
 	NSError	*error = nil;
-	[[NSFileManager defaultManager] createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:&error];
+	[[NSFileManager defaultManager] createDirectoryAtPath:directory withIntermediateDirectories:NO attributes:nil error:&error];
 }
 
-extern "C" void util_remove_file_at ( const char* filename ) {
+///////////////////////////////////
+extern "C" void remove_file_at ( const char* filename )
+{
 	NSString *fileRemoval = [NSString stringWithUTF8String:filename];
 	[[NSFileManager defaultManager] removeItemAtPath:fileRemoval error:NULL];
 }

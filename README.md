@@ -3,7 +3,9 @@
 ## About:
 This project exists as a simple library for small C++ programs wanting a quick way to get a cocoa opengl window up and running.
 
-<img src="other/CocoaWindowImageDouble.png" alt="Cocoa Window Image" height="219px" style="height: 219px;"/>
+<p aligh="center">
+	<img src="other/CocoaWindowImageDouble.png" alt="Cocoa Window Image" height="219px" style="height: 219px;"/>
+</p>
 
 ## Dependencies:
 This project uses Apples API's so it is MacOSX dependent. The libraries / frameworks it requires are:
