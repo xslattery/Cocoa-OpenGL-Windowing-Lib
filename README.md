@@ -3,7 +3,7 @@
 ## About:
 This project exists as a simple library for small C++ programs wanting a quick way to get a cocoa opengl window up and running.
 
-<p aligh="center">
+<p align ="center">
 	<img src="other/CocoaWindowImageDouble.png" alt="Cocoa Window Image" height="219px" style="height: 219px;"/>
 </p>
 
