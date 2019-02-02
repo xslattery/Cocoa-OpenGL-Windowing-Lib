@@ -1,4 +1,4 @@
-# Cpp-Cocoa-OpenGL-Windowing-Lib
+# Cocoa-OpenGL-Windowing-Lib
 
 ## About:
 This project exists as a simple library for small C++ programs wanting a quick way to get a cocoa opengl window up and running.
